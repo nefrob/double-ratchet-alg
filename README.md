@@ -18,8 +18,9 @@ Built using Python 3.8.2.
 - ~~Find crypto lib~~
 - ~~Implement spec crypto functions~~
 - Error checking in crypto, logging, etc.
-- Setup double ratchet state
 - Implement sending/receiving messages
-- Handle missing/skipped messages
+- ~~Handle missing/skipped messages~~
+- Test send/recv of messages
+- Setup double ratchet state
 - Header encryption
 - Maybe integrate with X3HD?

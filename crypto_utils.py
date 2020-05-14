@@ -6,7 +6,8 @@ import logging
 import os
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives import hashes, hmac.HMAC
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.hmac import HMAC
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM, AESCCM
 
@@ -29,8 +30,7 @@ def gen_dh_keys():
 '''
 Return DH output of dh_pair private key and peer public key.
 '''
-def dh_out(dh_pair, peer_pk):
-
+def get_dh_out(dh_pair, peer_pk):
   try:
     shared_key = dh_pair.exchange(peer_pk)
     return shared_key
@@ -70,7 +70,7 @@ def ratchet_chain(ck):
   hmac_mk = hmac_ck.copy()
 
   hmac_ck.update(b"ck_ratchet")
-  hmac_mk.update(b"mk_key_ratchet")
+  hmac_mk.update(b"mk_ratchet")
   
   return  hmac_ck.finalize(), hmac_mk.finalize()
 
@@ -91,7 +91,7 @@ def encrypt(mk, pt, associated_data):
     logging.exception("Error encrypting with AES-GCM.")
     return _, ERROR
 
-  return ct, SUCCESS
+  return (iv, ct), SUCCESS
 
 
 '''
@@ -102,7 +102,7 @@ def encrypt_ccm(mk, pt, associated_data):
     algorithm=hashes.SHA256(),
     length=KDF_ENCRYPT_BYTES,
     salt=bytes(KDF_ENCRYPT_BYTES),
-    info=b"",
+    info=b"ccm_keys",
     backend=default_backend()
   )
 
@@ -117,9 +117,23 @@ def encrypt_ccm(mk, pt, associated_data):
     ct = aesccm.encrypt(iv, pt, associated_data)
   except:
     logging.exception("Error encrypting with AES-CCM.")
-    return _, ERROR
+    return _, _, ERROR
 
-  return ct, SUCCESS
+  # Add integrity
+  hmac = HMAC(
+    auth_key,
+    hashes.SHA256(),
+    backend=default_backend()
+  )
+
+  try:
+    hmac.update(associated_data + ct)
+    hmac_out = hmac.finalize()
+  except:
+    logging.exception("Error checking HMAC-SHA256 tag.")
+    return _, _, ERROR
+
+  return ct, hmac_out, SUCCESS
 
 
 '''
@@ -129,16 +143,17 @@ Raises exception on authentication failure.
 Note: Uses AES-GCM instead of Signal spec AES-CBC with HMAC-SHA256 to reduce
 complexity and so room for error.
 '''
-def decrypt(mk, ct, iv, associated_data):
+def decrypt(mk, ct, associated_data):
   # Decrypt message
   try:
-    aesccm = AESGCM(mk)
-    pt = aesgcm.decrypt(iv, ct, associated_data)
+    aesgcm = AESGCM(mk)
+    pt = aesgcm.decrypt(ct[0], ct[1], associated_data)
   except:
     logging.exception("Error decrypting with AES-GCM.")
     return _, ERROR
 
   return pt, SUCCESS
+
 
 '''
 Return AEAD decryption of cipher text using message key.
@@ -149,7 +164,7 @@ def decrypt_ccm(mk, ct, hmac_ct, associated_data):
     algorithm=hashes.SHA256(),
     length=KDF_ENCRYPT_BYTES,
     salt=bytes(KDF_ENCRYPT_BYTES),
-    info=b"",
+    info=b"ccm_keys",
     backend=default_backend()
   )
 
