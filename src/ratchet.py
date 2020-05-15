@@ -101,7 +101,7 @@ def decrypt_msg(state, header, ct, associated_data):
   
   old_state = copy(state)
 
-  if header.pk != state.peer_pk: # save mks from old recv chain
+  if not crypto_utils.pks_equal(header.pk, state.peer_pk): # save mks from old recv chain
     try:
       skip_over_mks(state, header.prev_chain_len)
     except:
@@ -117,7 +117,7 @@ def decrypt_msg(state, header, ct, associated_data):
     return None
   
   state.ck_r, mk = crypto_utils.ratchet_chain(state.ck_r)
-  state.send_msg_no += 1
+  state.recv_msg_no += 1
 
   pt, ret = crypto_utils.decrypt(
     mk, ct, utils.encode_header(associated_data, header))
@@ -133,9 +133,11 @@ Returns plain text if the message corresponds to a skipped message key,
 deleting the key from the saved key map.
 '''
 def try_skipped_mks(state, header, ct, associated_data):
-  if (header.pk, header.msg_no) in state.skipped_mks:
-    mk = state.skipped_mks[(header.pk, header.msg_no)]
-    del state.skipped_mks[(header.pk, header.msg_no)]
+  hdr_pk_bytes = crypto_utils.pk_bytes(header.pk)
+
+  if (hdr_pk_bytes, header.msg_no) in state.skipped_mks:
+    mk = state.skipped_mks[(hdr_pk_bytes, header.msg_no)]
+    del state.skipped_mks[(hdr_pk_bytes, header.msg_no)]
     
     pt, ret = crypto_utils.decrypt(
       mk, ct, utils.encode_header(associated_data, header))
@@ -155,7 +157,7 @@ def skip_over_mks(state, end_msg_no):
   elif state.ck_r != None:
     while state.recv_msg_no < end_msg_no:
       state.ck_r, mk = crypto_utils.ratchet_chain(state.ck_r)
-      state.skipped_mks[(state.peer_pk, state.recv_msg_no)] = mk
+      state.skipped_mks[(crypto_utils.pk_bytes(state.peer_pk), state.recv_msg_no)] = mk
       state.recv_msg_no += 1
 
 

@@ -3,14 +3,16 @@ Cryptography utility functions.
 '''
 
 import logging
-import os
 from enum import Enum
+import secrets
+import string
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.hmac import HMAC
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM, AESCCM
+from cryptography.hazmat.primitives import serialization
 
 # Constants
 KEY_BYTES = 32
@@ -103,7 +105,7 @@ def encrypt(mk, pt, associated_data):
 
   try:
     aesgcm = AESGCM(mk)
-    iv = os.urandom(IV_BYTES)
+    iv = secrets.token_bytes(IV_BYTES)
     ct = aesgcm.encrypt(iv, pt.encode('utf-8'), associated_data)
   except:
     logging.exception("Error: plain text or associated data too large.")
@@ -211,3 +213,31 @@ def decrypt_ccm(mk, ct, associated_data):
     return None, CRYPTO_RET.AES_INVALID_TAG
 
   return pt.decode('utf-8'), CRYPTO_RET.SUCCESS
+
+
+'''
+Return whether DH public keys are equal.
+'''
+def pks_equal(pk1, pk2):
+  return pk_bytes(pk1) == pk_bytes(pk2)
+
+'''
+Convert DH public key to bytes.
+'''
+def pk_bytes(pk):
+  if pk == None:
+    return None
+
+  assert(isinstance(pk, X448PublicKey))
+
+  return pk.public_bytes(
+    encoding=serialization.Encoding.Raw,format=serialization.PublicFormat.Raw)
+
+
+'''
+Returns random string of specified length.
+'''
+def rand_str(n):
+  return ''.join(secrets.choice(
+    string.ascii_uppercase + string.digits) for i in range(n)) 
+
