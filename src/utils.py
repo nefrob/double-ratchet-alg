@@ -26,7 +26,7 @@ Header for ratchet chain message.
 '''
 class MsgHeader:
   def __init__(self, pk, prev_chain_len, msg_no):
-    assert(isinstance(pk, X448PrivateKey))
+    assert(isinstance(pk, X448PublicKey))
 
     self.pk = pk
     self.prev_chain_len = prev_chain_len

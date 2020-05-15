@@ -4,8 +4,8 @@ Ref: https://signal.org/docs/specifications/doubleratchet/
 '''
 
 from copy import copy
-import utils
-import crypto_utils
+import src.utils as utils
+import src.crypto_utils as crypto_utils
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 
 # Max number of message keys that can be skipped in a single chain
@@ -18,7 +18,7 @@ with shared secret so that peer can send messages immediately after
 initialization.
 '''
 def init_sender(state, sk, peer_pk, ck_r = None):
-  assert(state != None)
+  assert(isinstance(state, utils.State))
   assert(isinstance(sk, bytes))
   assert(isinstance(peer_pk, X448PublicKey))
 
@@ -39,7 +39,7 @@ with  shared secret so messages can be sent immediately after
 initialization.
 '''
 def init_receiver(state, sk, dh_pair, ck_s = None):
-  assert(state != None)
+  assert(isinstance(state, utils.State))
   assert(isinstance(sk, bytes))
   assert(isinstance(dh_pair, X448PrivateKey))
 
@@ -58,7 +58,7 @@ def init_receiver(state, sk, dh_pair, ck_s = None):
 Encrypts a message to be sent, ratcheting the sending chain.
 '''
 def encrypt_msg(state, pt, associated_data):
-  assert(state != None)
+  assert(isinstance(state, utils.State))
   assert(isinstance(pt, str))
   assert(isinstance(associated_data, bytes))
 
@@ -72,7 +72,7 @@ def encrypt_msg(state, pt, associated_data):
   ct, ret = crypto_utils.encrypt(mk, pt, 
     utils.encode_header(associated_data, header))
 
-  if ret < 0:
+  if ret != crypto_utils.CRYPTO_RET.SUCCESS:
     state = old_state
     return None, None
   
@@ -90,7 +90,7 @@ Note: On exception (ex. message authentication failure), the message is
 discarded as well as any state changes made.
 '''
 def decrypt_msg(state, header, ct, associated_data):
-  assert(state != None)
+  assert(isinstance(state, utils.State))
   assert(isinstance(header, utils.MsgHeader))
   assert(isinstance(ct, bytes))
   assert(isinstance(associated_data, bytes))
@@ -100,8 +100,8 @@ def decrypt_msg(state, header, ct, associated_data):
     return pt
   
   old_state = copy(state)
-  
-  if header.peer_pk != state.peer_pk: # save mks from old recv chain
+
+  if header.pk != state.peer_pk: # save mks from old recv chain
     try:
       skip_over_mks(state, header.prev_chain_len)
     except:
@@ -121,7 +121,7 @@ def decrypt_msg(state, header, ct, associated_data):
 
   pt, ret = crypto_utils.decrypt(
     mk, ct, utils.encode_header(associated_data, header))
-  if ret < 0:
+  if ret != crypto_utils.CRYPTO_RET.SUCCESS:
     state = old_state
     return None
 
@@ -164,7 +164,7 @@ Performs DH-ratchet step, updating the root chain twice and
 so resetting sending/receiving chains.
 '''
 def dh_ratchet(state, header):
-  state.peer_pk = header.peer_pk
+  state.peer_pk = header.pk
   state.rk, state.ck_r = crypto_utils.ratchet_root(
     crypto_utils.get_dh_out(state.dh_pair, state.peer_pk), state.rk)
   state.dh_pair = crypto_utils.gen_dh_keys()
