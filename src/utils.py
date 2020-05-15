@@ -2,7 +2,8 @@
 Utility functions.
 '''
 
-from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
+from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
+
 
 '''
 State for sender/receiver in double-ratchet algorithm.
@@ -25,6 +26,8 @@ Header for ratchet chain message.
 '''
 class MsgHeader:
   def __init__(self, pk, prev_chain_len, msg_no):
+    assert(isinstance(pk, X448PrivateKey))
+
     self.pk = pk
     self.prev_chain_len = prev_chain_len
     self.msg_no = msg_no
@@ -34,6 +37,8 @@ class MsgHeader:
 Return new message header.
 '''
 def build_header(dh_pair, prev_chain_len, msg_no):
+  assert(isinstance(dh_pair, X448PrivateKey))
+
   return MsgHeader(
     dh_pair.public_key(), 
     prev_chain_len, 
@@ -46,4 +51,7 @@ Returns associated data and message header as parseable
 byte sequence. 
 '''
 def encode_header(associated_data, header):
-  return associated_data + bytes(header)
+  assert(isinstance(associated_data, bytes))
+  assert(isinstance(header, MsgHeader))
+
+  return associated_data + repr(header).encode('utf-8')
