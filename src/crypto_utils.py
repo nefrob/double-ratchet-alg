@@ -107,7 +107,7 @@ def encrypt(mk, pt, associated_data):
     ct = aesgcm.encrypt(iv, pt.encode('utf-8'), associated_data)
   except:
     logging.exception("Error: plain text or associated data too large.")
-    return _, CRYPTO_RET.AES_DATA_TOO_LARGE
+    return None, CRYPTO_RET.AES_DATA_TOO_LARGE
 
   return ct + iv, CRYPTO_RET.SUCCESS
 
@@ -139,7 +139,7 @@ def encrypt_ccm(mk, pt, associated_data):
     ct = aesccm.encrypt(iv, pt.encode('utf-8'), associated_data)
   except:
     logging.exception("Error: plain text or associated data too large.")
-    return _, CRYPTO_RET.AES_DATA_TOO_LARGE
+    return None, CRYPTO_RET.AES_DATA_TOO_LARGE
 
   tag = compute_hmac(auth_key, associated_data + ct)
 
@@ -163,7 +163,7 @@ def decrypt(mk, ct, associated_data):
     pt = aesgcm.decrypt(ct[-IV_BYTES:], ct[:-IV_BYTES], associated_data)
   except:
     logging.exception("Error: invalid authentication tag.")
-    return _, CRYPTO_RET.AES_INVALID_TAG
+    return None, CRYPTO_RET.AES_INVALID_TAG
 
   return pt.decode('utf-8'), CRYPTO_RET.SUCCESS
 
@@ -208,6 +208,6 @@ def decrypt_ccm(mk, ct, associated_data):
     pt = aesccm.decrypt(iv, ct[:-HASH_ALG_BYTES], associated_data)
   except:
     logging.exception("Error: invalid authentication tag.")
-    return _, CRYPTO_RET.AES_INVALID_TAG
+    return None, CRYPTO_RET.AES_INVALID_TAG
 
   return pt.decode('utf-8'), CRYPTO_RET.SUCCESS
