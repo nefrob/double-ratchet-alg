@@ -1,64 +1,36 @@
-'''
-Utility functions.
-'''
+from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
 
-from  src.crypto_utils import pk_bytes
-from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
+from .state import MsgHeader
 
 
-'''
-State for sender/receiver in double-ratchet algorithm.
-'''
-class State:
-  def __init__(self):
-    self.dh_pair = None
-    self.peer_pk = None
-    self.rk = None
-    self.ck_s = None 
-    self.ck_r = None
-    self.send_msg_no = 0
-    self.recv_msg_no = 0
-    self.prev_chain_len = 0
-    self.skipped_mks = {}
-
-
-'''
-Header for ratchet chain message.
-'''
-class MsgHeader:
-  def __init__(self, pk, prev_chain_len, msg_no):
-    assert(isinstance(pk, X448PublicKey))
-
-    self.pk = pk
-    self.prev_chain_len = prev_chain_len
-    self.msg_no = msg_no
-
-
-  def to_bytes(self):
-    key_bytes = pk_bytes(self.pk)
-    ints = (str(self.prev_chain_len) + str(self.msg_no)).encode("utf-8")
-    return key_bytes + ints
-
-
-'''
-Return new message header.
-'''
+# Return new message header.
 def build_header(dh_pair, prev_chain_len, msg_no):
   assert(isinstance(dh_pair, X448PrivateKey))
 
   return MsgHeader(
     dh_pair.public_key(), 
     prev_chain_len, 
-    msg_no
-  )
+    msg_no)
 
 
-'''
-Returns associated data and message header as parseable 
-byte sequence. 
-'''
+# Return associated data and message header as byte sequence.
 def encode_header(associated_data, header):
   assert(isinstance(associated_data, bytes))
   assert(isinstance(header, MsgHeader))
 
   return associated_data + header.to_bytes()
+
+# Restore old state to state object.
+# FIXME: we cannot simply assign or it will change ref'd state obj.
+# Alternatively we could return new state (i.e. old_state) but this
+# will require reconstruction in decrypt ...
+def restore_decrypt_state(state, old_state):
+  state.dh_pair = old_state.dh_pair
+  state.peer_pk = old_state.peer_pk
+  state.rk = old_state.rk
+  state.ck_s = old_state.ck_s
+  state.ck_r = old_state.ck_r
+  state.send_msg_no = old_state.send_msg_no
+  state.recv_msg_no = old_state.recv_msg_no
+  state.prev_chain_len = old_state.prev_chain_len
+  state.skipped_mks = old_state.skipped_mks

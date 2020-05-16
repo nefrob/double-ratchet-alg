@@ -2,20 +2,19 @@
 Tests for ratchet alg.
 '''
 
-import unittest
-import logging
 import os
 import random as rand
-import src.crypto_utils as crypto
+import unittest
+
+import src.crypto as crypto
+from src.crypto_utils import rand_str
 import src.ratchet as ratchet
-import src.utils as utils
+from src.state import RatchetState, MsgHeader
 
 
-'''
-Create test user state.
-'''
+# Create test user state.
 def create_user(sk, dh_pair, is_sender = True):
-  usr = utils.State()
+  usr = RatchetState()
   if is_sender:
     ratchet.init_sender(usr, sk, dh_pair.public_key())
   else:
@@ -23,43 +22,31 @@ def create_user(sk, dh_pair, is_sender = True):
 
   return usr
 
-
-'''
-Simple sender/receiver user setup.
-'''
+# Simple sender/receiver user setup.
 def setup_convo():
-  sk = os.urandom(crypto.KEY_BYTES)
+  sk = os.urandom(crypto.DEFAULT_KEY_BYTES)
   recv_dh = crypto.gen_dh_keys()
   initial_sender = create_user(sk, recv_dh)
   initial_receiver = create_user(sk, recv_dh, is_sender=False)
 
   return initial_sender, initial_receiver
 
-
-'''
-Encrypt message from sender.
-'''
+# Encrypt message from sender.
 def send_encrypt(sender):
-  msg = crypto.rand_str(rand.randint(0, 100))
+  msg = rand_str(rand.randint(0, 100))
   data = os.urandom(rand.randint(0, 100))
 
   hdr, ct = ratchet.encrypt_msg(sender, msg, data)
   return msg, data, hdr, ct
 
-
-'''
-Decrypt message as receiver.
-'''
+# Decrypt message as receiver.
 def recv_decrypt(self, receiver, msg, data, hdr, ct):
   pt = ratchet.decrypt_msg(receiver, hdr, ct, data)
 
   self.assertIsNotNone(pt)
   self.assertEqual(pt, msg)
 
-
-'''
-Encrypt/decrypt message between two users.
-'''
+# Encrypt/decrypt message between two users.
 def send_recv(self, sender, receiver):
   msg, data, hdr, ct = send_encrypt(sender)
   recv_decrypt(self, receiver, msg, data, hdr, ct)
@@ -69,38 +56,27 @@ def send_recv(self, sender, receiver):
 Unit tests.
 '''
 class RatchetTests(unittest.TestCase):
-  '''
-  Test encrypt message.
-  '''
+  # Test encrypt message
   def test_encrypt(self):
-    usr = create_user(os.urandom(crypto.KEY_BYTES), crypto.gen_dh_keys())
+    usr = create_user(os.urandom(crypto.DEFAULT_KEY_BYTES), crypto.gen_dh_keys())
     hdr, ct = ratchet.encrypt_msg(usr, "pt", b"data")
 
     self.assertIsNotNone(hdr)
     self.assertIsNotNone(ct)
 
-
-  '''
-  Test decrypt message.
-  '''
+  # Test decrypt message
   def test_decrypt(self):
     a, b = setup_convo()
     send_recv(self, a, b)
 
-
-  '''
-  Test one sided conversation.
-  '''
+  # Test one sided conversation
   def test_one_side(self):
     a, b = setup_convo()
     send_recv(self, a, b)
     send_recv(self, a, b)
     send_recv(self, a, b)
 
-  
-  '''
-  Test conversation.
-  '''
+  # Test conversation
   def test_conversation(self):
     a, b = setup_convo()
     send_recv(self, a, b)
@@ -110,10 +86,7 @@ class RatchetTests(unittest.TestCase):
     send_recv(self, b, a)
     send_recv(self, b, a)
 
-  
-  '''
-  Test out of order messages single chain.
-  '''
+  # Test out of order messages single chain
   def test_out_of_order_single(self):
     a, b = setup_convo()
     
@@ -125,10 +98,7 @@ class RatchetTests(unittest.TestCase):
     recv_decrypt(self, b, msg3, data3, hdr3, ct3)
     recv_decrypt(self, b, msg1, data1, hdr1, ct1)
 
-
-  '''
-  Test out of order messages with DH ratchet step.
-  '''
+  # Test out of order messages with DH ratchet step
   def test_out_of_order_ratchet(self):
     a, b = setup_convo()
 
@@ -143,10 +113,7 @@ class RatchetTests(unittest.TestCase):
     recv_decrypt(self, b, msg3, data3, hdr3, ct3)
     recv_decrypt(self, b, msg2, data2, hdr2, ct2)
 
-
-  '''
-  Test replayed messages rejected.
-  '''
+  # Test replayed messages rejected
   def test_replay(self):
     a, b = setup_convo()
   
@@ -158,10 +125,7 @@ class RatchetTests(unittest.TestCase):
     # Check state restored correctly and can send/recv
     send_recv(self, a, b)
 
-
-  '''
-  Test invalid authentication tag rejected.
-  '''
+  # Test invalid authentication tag rejected
   def test_tampering(self):
     a, b = setup_convo()
   
@@ -172,8 +136,7 @@ class RatchetTests(unittest.TestCase):
     # Check state restored correctly and decrypt
     recv_decrypt(self, b, msg, data, hdr, ct)
 
-  
-    # TODO: for future when multiparty supported
+  # TODO: for future when multiparty supported
 
 #   '''
 #   Test send multiple people messages (send).
@@ -203,6 +166,4 @@ class RatchetTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  # logger = logging.getLogger()
-  # logger.disabled = True
   unittest.main() 
