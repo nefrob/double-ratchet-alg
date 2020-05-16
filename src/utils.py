@@ -2,6 +2,7 @@
 Utility functions.
 '''
 
+from  src.crypto_utils import pk_bytes
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 
 
@@ -33,6 +34,12 @@ class MsgHeader:
     self.msg_no = msg_no
 
 
+  def to_bytes(self):
+    key_bytes = pk_bytes(self.pk)
+    ints = (str(self.prev_chain_len) + str(self.msg_no)).encode("utf-8")
+    return key_bytes + ints
+
+
 '''
 Return new message header.
 '''
@@ -54,4 +61,4 @@ def encode_header(associated_data, header):
   assert(isinstance(associated_data, bytes))
   assert(isinstance(header, MsgHeader))
 
-  return associated_data + repr(header).encode('utf-8')
+  return associated_data + header.to_bytes()

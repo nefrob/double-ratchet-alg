@@ -17,7 +17,8 @@ from cryptography.hazmat.primitives import serialization
 # Constants
 KEY_BYTES = 32
 IV_BYTES = 16
-CCM_KDF_BYTES = KEY_BYTES * 2 + IV_BYTES
+CCM_IV_BYTES = 13 # max value
+CCM_KDF_BYTES = KEY_BYTES * 2 + CCM_IV_BYTES
 HASH_ALG = hashes.SHA256()
 HASH_ALG_BYTES = 32
 
@@ -106,7 +107,7 @@ def encrypt(mk, pt, associated_data):
   try:
     aesgcm = AESGCM(mk)
     iv = secrets.token_bytes(IV_BYTES)
-    ct = aesgcm.encrypt(iv, pt.encode('utf-8'), associated_data)
+    ct = aesgcm.encrypt(iv, pt.encode("utf-8"), associated_data)
   except:
     logging.exception("Error: plain text or associated data too large.")
     return None, CRYPTO_RET.AES_DATA_TOO_LARGE
@@ -138,7 +139,7 @@ def encrypt_ccm(mk, pt, associated_data):
   try:
     # FIXME: verify AESCCM uses PKCS#7 padding
     aesccm = AESCCM(aes_key)
-    ct = aesccm.encrypt(iv, pt.encode('utf-8'), associated_data)
+    ct = aesccm.encrypt(iv, pt.encode("utf-8"), associated_data)
   except:
     logging.exception("Error: plain text or associated data too large.")
     return None, CRYPTO_RET.AES_DATA_TOO_LARGE
@@ -167,7 +168,7 @@ def decrypt(mk, ct, associated_data):
     logging.exception("Error: invalid authentication tag.")
     return None, CRYPTO_RET.AES_INVALID_TAG
 
-  return pt.decode('utf-8'), CRYPTO_RET.SUCCESS
+  return pt.decode("utf-8"), CRYPTO_RET.SUCCESS
 
 
 '''
@@ -202,7 +203,7 @@ def decrypt_ccm(mk, ct, associated_data):
     hmac.verify(ct[-HASH_ALG_BYTES:])
   except:
     logging.exception("Error: invalid authentication tag.")
-    return _, CRYPTO_RET.HMAC_INVALID_TAG
+    return None, CRYPTO_RET.HMAC_INVALID_TAG
 
   try:
     # FIXME: verify AESCCM uses PKCS#7 padding
@@ -212,7 +213,7 @@ def decrypt_ccm(mk, ct, associated_data):
     logging.exception("Error: invalid authentication tag.")
     return None, CRYPTO_RET.AES_INVALID_TAG
 
-  return pt.decode('utf-8'), CRYPTO_RET.SUCCESS
+  return pt.decode("utf-8"), CRYPTO_RET.SUCCESS
 
 
 '''

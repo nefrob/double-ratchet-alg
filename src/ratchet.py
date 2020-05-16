@@ -56,13 +56,17 @@ def init_receiver(state, sk, dh_pair, ck_s = None):
 
 '''
 Encrypts a message to be sent, ratcheting the sending chain.
+
+Note: On exception (ex. message encryption failure), the message is
+discarded as well as any state changes made.
 '''
 def encrypt_msg(state, pt, associated_data):
   assert(isinstance(state, utils.State))
   assert(isinstance(pt, str))
   assert(isinstance(associated_data, bytes))
 
-  old_state = copy(state)
+  old_ck = state.ck_s
+  old_msg_no = state.send_msg_no
 
   state.ck_s, mk = crypto_utils.ratchet_chain(state.ck_s)
   header = utils.build_header(state.dh_pair, 
@@ -73,7 +77,9 @@ def encrypt_msg(state, pt, associated_data):
     utils.encode_header(associated_data, header))
 
   if ret != crypto_utils.CRYPTO_RET.SUCCESS:
-    state = old_state
+    # Restore state
+    state.ck_r = old_ck
+    state.send_msg_no = old_msg_no
     return None, None
   
   return header, ct
@@ -105,27 +111,46 @@ def decrypt_msg(state, header, ct, associated_data):
     try:
       skip_over_mks(state, header.prev_chain_len)
     except:
-      state = old_state
+      restore_decrypt_state(state, old_state)
       return None
     
-    dh_ratchet(state, header)
+    dh_ratchet(state, header.pk)
   
   try:
     skip_over_mks(state, header.msg_no) # save mks on new sending chain
   except:
-    state = old_state
+    restore_decrypt_state(state, old_state)
     return None
-  
+
   state.ck_r, mk = crypto_utils.ratchet_chain(state.ck_r)
   state.recv_msg_no += 1
 
   pt, ret = crypto_utils.decrypt(
     mk, ct, utils.encode_header(associated_data, header))
   if ret != crypto_utils.CRYPTO_RET.SUCCESS:
-    state = old_state
+    restore_decrypt_state(state, old_state)
     return None
 
   return pt
+
+
+'''
+Restore old state to state object.
+
+FIXME: we cannot simply assign or it will change ref'd state obj.
+Alternatively we could return new state (i.e. old_state) but this
+will require reconstruction in decrypt ...
+'''
+def restore_decrypt_state(state, old_state):
+  state.dh_pair = old_state.dh_pair
+  state.peer_pk = old_state.peer_pk
+  state.rk = old_state.rk
+  state.ck_s = old_state.ck_s
+  state.ck_r = old_state.ck_r
+  state.send_msg_no = old_state.send_msg_no
+  state.recv_msg_no = old_state.recv_msg_no
+  state.prev_chain_len = old_state.prev_chain_len
+  state.skipped_mks = old_state.skipped_mks
 
 
 '''
@@ -138,7 +163,7 @@ def try_skipped_mks(state, header, ct, associated_data):
   if (hdr_pk_bytes, header.msg_no) in state.skipped_mks:
     mk = state.skipped_mks[(hdr_pk_bytes, header.msg_no)]
     del state.skipped_mks[(hdr_pk_bytes, header.msg_no)]
-    
+
     pt, ret = crypto_utils.decrypt(
       mk, ct, utils.encode_header(associated_data, header))
     if ret == crypto_utils.CRYPTO_RET.SUCCESS:
@@ -165,8 +190,8 @@ def skip_over_mks(state, end_msg_no):
 Performs DH-ratchet step, updating the root chain twice and
 so resetting sending/receiving chains.
 '''
-def dh_ratchet(state, header):
-  state.peer_pk = header.pk
+def dh_ratchet(state, peer_pk):
+  state.peer_pk = peer_pk
   state.rk, state.ck_r = crypto_utils.ratchet_root(
     crypto_utils.get_dh_out(state.dh_pair, state.peer_pk), state.rk)
   state.dh_pair = crypto_utils.gen_dh_keys()

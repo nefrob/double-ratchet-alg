@@ -39,7 +39,7 @@ def setup_convo():
 '''
 Encrypt message from sender.
 '''
-def send_ecrypt(sender):
+def send_encrypt(sender):
   msg = crypto.rand_str(rand.randint(0, 100))
   data = os.urandom(rand.randint(0, 100))
 
@@ -61,7 +61,7 @@ def recv_decrypt(self, receiver, msg, data, hdr, ct):
 Encrypt/decrypt message between two users.
 '''
 def send_recv(self, sender, receiver):
-  msg, data, hdr, ct = send_ecrypt(sender)
+  msg, data, hdr, ct = send_encrypt(sender)
   recv_decrypt(self, receiver, msg, data, hdr, ct)
 
 
@@ -114,38 +114,67 @@ class RatchetTests(unittest.TestCase):
   '''
   Test out of order messages single chain.
   '''
-  def test(self):
+  def test_out_of_order_single(self):
     a, b = setup_convo()
     
-    msg1, data1, hdr1, ct1 = send_ecrypt(a)
-    msg2, data2, hdr2, ct2 = send_ecrypt(a)
-    msg3, data3, hdr3, ct3 = send_ecrypt(a)
+    msg1, data1, hdr1, ct1 = send_encrypt(a)
+    msg2, data2, hdr2, ct2 = send_encrypt(a)
+    msg3, data3, hdr3, ct3 = send_encrypt(a)
 
     recv_decrypt(self, b, msg2, data2, hdr2, ct2)
     recv_decrypt(self, b, msg3, data3, hdr3, ct3)
     recv_decrypt(self, b, msg1, data1, hdr1, ct1)
 
 
-#   '''
-#   Test out of order messages with DH ratchet step.
-#   '''
-#   def test(self):
-#     pass
+  '''
+  Test out of order messages with DH ratchet step.
+  '''
+  def test_out_of_order_ratchet(self):
+    a, b = setup_convo()
+
+    msg1, data1, hdr1, ct1 = send_encrypt(a)
+    recv_decrypt(self, b, msg1, data1, hdr1, ct1)
+    msg2, data2, hdr2, ct2 = send_encrypt(a)
+
+    # Simulate receiving new public key from B
+    ratchet.dh_ratchet(a, b.dh_pair.public_key())
+
+    msg3, data3, hdr3, ct3 = send_encrypt(a)
+    recv_decrypt(self, b, msg3, data3, hdr3, ct3)
+    recv_decrypt(self, b, msg2, data2, hdr2, ct2)
 
 
-#   '''
-#   Test replayed messages rejected.
-#   '''
-#   def test(self):
-#     pass
-
-
-#   '''
-#   Test invalid authentication tag rejected.
-#   '''
-#   def test(self):
-#     pass
+  '''
+  Test replayed messages rejected.
+  '''
+  def test_replay(self):
+    a, b = setup_convo()
   
+    msg, data, hdr, ct = send_encrypt(a)
+    recv_decrypt(self, b, msg, data, hdr, ct)
+    pt = ratchet.decrypt_msg(b, hdr, ct, data)
+    self.assertIsNone(pt)
+
+    # Check state restored correctly and can send/recv
+    send_recv(self, a, b)
+
+
+  '''
+  Test invalid authentication tag rejected.
+  '''
+  def test_tampering(self):
+    a, b = setup_convo()
+  
+    msg, data, hdr, ct = send_encrypt(a)
+    pt = ratchet.decrypt_msg(b, hdr, ct, b"tamper")
+    self.assertIsNone(pt)
+
+    # Check state restored correctly and decrypt
+    recv_decrypt(self, b, msg, data, hdr, ct)
+
+  
+    # TODO: for future when multiparty supported
+
 #   '''
 #   Test send multiple people messages (send).
 #   '''
@@ -173,8 +202,7 @@ class RatchetTests(unittest.TestCase):
 #     pass
 
 
-
 if __name__ == '__main__':
-  logger = logging.getLogger()
-  logger.disabled = True
+  # logger = logging.getLogger()
+  # logger.disabled = True
   unittest.main() 

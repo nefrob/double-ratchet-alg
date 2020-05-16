@@ -2,22 +2,9 @@
 
 Implements Double Ratchet Algorithm per Signal [secifications](https://signal.org/docs/specifications/doubleratchet/).
 
-<!-- Provides: 
-
-- Resilience: The output keys appear random to an adversary without
-knowledge of the KDF keys. This is true even if the adversary can 
-control the KDF inputs.
-
-- Forward security: Output keys from the past appear random to 
-an adversary who learns the KDF key at some point in time.
-
-- Break-in recovery: Future output keys appear random to an 
-adversary who learns the KDF key at some point in time, 
-provided that future inputs have added sufficient entropy. -->
-
 ### Usage
 
-TODO: pending update
+Come back later! Currently in early development.
 
 ### Dependencies
 
@@ -29,11 +16,20 @@ Built using Python 3.8.2.
 ### Tasks:
 
 - ~~Find crypto lib~~
-- ~~Implement spec crypto functions~~
-- Error checking in crypto, logging, etc.
-- Implement sending/receiving messages
+- ~~Implement Signal spec double ratchet crypto functions~~
+- ~~Add minor error checking to crypto~~
 - ~~Handle missing/skipped messages~~
-- Test send/recv of messages
-- Setup double ratchet state
+- ~~Test basic cross user ratchet steps~~
+- Refactor and simplify ratchet/crypto code
 - Header encryption
-- Maybe integrate with X3HD?
+- Add debug logging
+- Setup session/users/state + cleanup interface
+
+Extra options:
+
+- Add backdoor?
+- Maybe integrate with X3HD
+
+### Questions?
+
+- Post issues in the [Issue Tracker](https://github.com/nefrob/double-ratchet-alg/issues)
