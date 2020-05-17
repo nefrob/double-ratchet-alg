@@ -4,7 +4,7 @@ Implements Double Ratchet Algorithm per Signal [secifications](https://signal.or
 
 ### Usage
 
-Come back later! Currently in early development.
+**Come back later! Currently in early development.**
 
 ### Dependencies
 

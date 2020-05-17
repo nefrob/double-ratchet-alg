@@ -18,8 +18,8 @@ class RatchetState:
     self.send_msg_no = 0
     self.recv_msg_no = 0
     self.prev_chain_len = 0
-    self.skipped_mks = {}
-    self.event_counter = 0 
+    self.skipped_mks = None
+    self.skipped_lifetimes = []
 
 
 # Header for ratchet chain message.

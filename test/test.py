@@ -166,14 +166,12 @@ class RatchetTests(unittest.TestCase):
     
     msg1, data1, hdr1, ct1 = send_encrypt(a)
     msg2, data2, hdr2, ct2 = send_encrypt(a)
-    for i in range(ratchet.DELETE_EVENT_NUM): # increment even counter
+    for i in range(ratchet.DELETE_MIN_EVENTS): # increment even counter
       send_recv(self, a, b)
     
     pt = ratchet.decrypt_msg(b, hdr1, ct1, data1) # fails
     self.assertIsNone(pt)
-
-    for i in range(ratchet.DELETE_EVENT_NUM - 1): # increment even counter
-      send_recv(self, a, b)
+    
     recv_decrypt(self, b, msg2, data2, hdr2, ct2) # still succeeds
 
   # TODO: for future when multiparty supported
