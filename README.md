@@ -20,11 +20,10 @@ Built using Python 3.8.2.
 - ~~Add minor error checking to crypto~~
 - ~~Handle missing/skipped messages~~
 - ~~Test basic cross user ratchet steps~~
-- ~~Refactor and simplify ratchet/crypto code where possible~~
-- Header encryption
+- ~~Header encryption~~
 - Delete skipped msg keys after time or msgs received count
 - Deferred ratchet keygen until send time
-- Reduce transmitted message size (AES-GCM IV from HDKF, truncate AES-CCM HMAC tag)
+- Reduce transmitted message size (AES-GCM IV from HDKF?, truncate AES-CCM HMAC tag)
 - Allow choosing of hash/alg types, key size etc.
 - Add debug logging?
 - Add documentation
@@ -32,9 +31,11 @@ Built using Python 3.8.2.
 
 Extra options:
 
+- Maybe integrate with X3HD
 - Fingerprinting support
 - Add backdoor?
-- Maybe integrate with X3HD
+- Multiparty communication just multi pairwise?
+- Checkout [Lime](https://gitlab.linphone.org/BC/public/lime/blob/master/lime.pdf) for potential updates
 
 ### Questions?
 

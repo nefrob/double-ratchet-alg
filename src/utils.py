@@ -1,7 +1,10 @@
-from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
+from sys import getsizeof
 
+from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
+
+from .crypto import X448_KEY_BYTES
 from .state import MsgHeader
-
+from json import loads
 
 # Return new message header.
 def build_header(dh_pair, prev_chain_len, msg_no):
@@ -12,13 +15,17 @@ def build_header(dh_pair, prev_chain_len, msg_no):
     prev_chain_len, 
     msg_no)
 
+# Return header from bytes array.
+def header_from_bytes(hdr_bytes):
+  if hdr_bytes == None:
+    return None
 
-# Return associated data and message header as byte sequence.
-def encode_header(associated_data, header):
-  assert(isinstance(associated_data, bytes))
-  assert(isinstance(header, MsgHeader))
+  assert(isinstance(hdr_bytes, bytes))
 
-  return associated_data + header.to_bytes()
+  pk = X448PublicKey.from_public_bytes(hdr_bytes[:X448_KEY_BYTES])
+  prev_chain_len = int.from_bytes(hdr_bytes[-4:-2], byteorder='little')
+  msg_no = int.from_bytes(hdr_bytes[-2:], byteorder='little')
+  return MsgHeader(pk, prev_chain_len, msg_no)
 
 # Restore old state to state object.
 # FIXME: we cannot simply assign or it will change ref'd state obj.
@@ -30,6 +37,10 @@ def restore_decrypt_state(state, old_state):
   state.rk = old_state.rk
   state.ck_s = old_state.ck_s
   state.ck_r = old_state.ck_r
+  state.hk_s = old_state.hk_s
+  state.hk_r = old_state.hk_r
+  state.next_hk_s = old_state.next_hk_s
+  state.next_hk_r = old_state.next_hk_r
   state.send_msg_no = old_state.send_msg_no
   state.recv_msg_no = old_state.recv_msg_no
   state.prev_chain_len = old_state.prev_chain_len

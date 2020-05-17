@@ -13,21 +13,24 @@ from src.state import RatchetState, MsgHeader
 
 
 # Create test user state.
-def create_user(sk, dh_pair, is_sender = True):
+def create_user(sk, dh_pair, hk1, hk2, is_sender = True):
   usr = RatchetState()
   if is_sender:
-    ratchet.init_sender(usr, sk, dh_pair.public_key())
+    ratchet.init_sender(usr, sk, dh_pair.public_key(), hk1, hk2)
   else:
-    ratchet.init_receiver(usr, sk, dh_pair)
+    ratchet.init_receiver(usr, sk, dh_pair, hk2, hk1)
 
   return usr
 
 # Simple sender/receiver user setup.
 def setup_convo():
   sk = os.urandom(crypto.DEFAULT_KEY_BYTES)
+  hk1 = os.urandom(crypto.DEFAULT_KEY_BYTES)
+  hk2 = os.urandom(crypto.DEFAULT_KEY_BYTES)
+
   recv_dh = crypto.gen_dh_keys()
-  initial_sender = create_user(sk, recv_dh)
-  initial_receiver = create_user(sk, recv_dh, is_sender=False)
+  initial_sender = create_user(sk, recv_dh, hk1, hk2)
+  initial_receiver = create_user(sk, recv_dh, hk1, hk2, is_sender=False)
 
   return initial_sender, initial_receiver
 
@@ -58,7 +61,10 @@ Unit tests.
 class RatchetTests(unittest.TestCase):
   # Test encrypt message
   def test_encrypt(self):
-    usr = create_user(os.urandom(crypto.DEFAULT_KEY_BYTES), crypto.gen_dh_keys())
+    usr = create_user(os.urandom(crypto.DEFAULT_KEY_BYTES), 
+      crypto.gen_dh_keys(),
+      os.urandom(crypto.DEFAULT_KEY_BYTES),
+      os.urandom(crypto.DEFAULT_KEY_BYTES))
     hdr, ct = ratchet.encrypt_msg(usr, "pt", b"data")
 
     self.assertIsNotNone(hdr)
