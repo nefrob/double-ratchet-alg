@@ -167,6 +167,8 @@ def try_skipped_mks(state, hdr_ct, ct, associated_data):
         mk, ct, associated_data + hdr_ct)
       if ret == CRYPTO_RET.SUCCESS:
         return pt_bytes.decode("utf-8")
+      else:
+        break
 
   return None
 

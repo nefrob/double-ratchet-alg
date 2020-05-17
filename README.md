@@ -35,7 +35,7 @@ Extra options:
 - Fingerprinting support
 - Add backdoor?
 - Multiparty communication just multi pairwise?
-- Checkout [Lime](https://gitlab.linphone.org/BC/public/lime/blob/master/lime.pdf) for potential updates
+- Checkout [Lime](https://gitlab.linphone.org/BC/public/lime/blob/master/lime.pdf) and [OMEMO](https://xmpp.org/extensions/xep-0384.html) for potential updates.
 
 ### Questions?
 

@@ -142,6 +142,40 @@ class RatchetTests(unittest.TestCase):
     # Check state restored correctly and decrypt
     recv_decrypt(self, b, msg, data, hdr, ct)
 
+  # Test old skipped mks deleted when skipped dict full
+  def test_skipped_mks_del(self):
+    a, b = setup_convo()
+    
+    _, data1, hdr1, ct1 = send_encrypt(a)
+    msg2, data2, hdr2, ct2 = send_encrypt(a)
+    for i in range(ratchet.MAX_SKIP - 2):
+      send_encrypt(a)
+    
+    send_recv(self, a, b) # msg 1001, gens 1000 skipped keys
+    send_encrypt(a)
+    send_recv(self, a, b) # 1003, gens new skipped, deletes first skipped
+    
+    pt = ratchet.decrypt_msg(b, hdr1, ct1, data1) # fails
+    self.assertIsNone(pt)
+      
+    recv_decrypt(self, b, msg2, data2, hdr2, ct2) # still succeeds
+
+  # Test old skipped mks deleted after num events
+  def test_skipped_mks_event_del(self):
+    a, b = setup_convo()
+    
+    msg1, data1, hdr1, ct1 = send_encrypt(a)
+    msg2, data2, hdr2, ct2 = send_encrypt(a)
+    for i in range(ratchet.DELETE_EVENT_NUM): # increment even counter
+      send_recv(self, a, b)
+    
+    pt = ratchet.decrypt_msg(b, hdr1, ct1, data1) # fails
+    self.assertIsNone(pt)
+
+    for i in range(ratchet.DELETE_EVENT_NUM - 1): # increment even counter
+      send_recv(self, a, b)
+    recv_decrypt(self, b, msg2, data2, hdr2, ct2) # still succeeds
+
   # TODO: for future when multiparty supported
 
 #   '''
@@ -162,14 +196,6 @@ class RatchetTests(unittest.TestCase):
 #   '''
 #   def test(self):
 #     pass
-
-
-#   '''
-#   Test incorrect recipient message decrypt fail.
-#   '''
-#   def test(self):
-#     pass
-
 
 if __name__ == '__main__':
   unittest.main() 
