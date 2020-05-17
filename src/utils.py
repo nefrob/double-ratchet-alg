@@ -45,3 +45,4 @@ def restore_decrypt_state(state, old_state):
   state.recv_msg_no = old_state.recv_msg_no
   state.prev_chain_len = old_state.prev_chain_len
   state.skipped_mks = old_state.skipped_mks
+  state.event_counter = old_state.event_counter

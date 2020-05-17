@@ -12,8 +12,9 @@ from .crypto_utils import pks_equal, pk_to_bytes
 from .state import RatchetState, MsgHeader
 from .utils import build_header, header_from_bytes, restore_decrypt_state
 
-# Max number of message keys that can be skipped in a single chain
-MAX_SKIP = 1000
+MAX_SKIP = 1000 # max message keys skipped in single chain
+DELETE_EVENT_NUM = 5 # events before an old skipped mk is deleted
+
 
 # FIXME: let caller choose crypto algs/sizes
 def init_sender(state, sk, peer_pk, hk_s, next_hk_r):
@@ -35,6 +36,7 @@ def init_sender(state, sk, peer_pk, hk_s, next_hk_r):
   state.recv_msg_no = 0
   state.prev_chain_len = 0
   state.skipped_mks = {}
+  state.event_counter = 0 
 
 # FIXME: let caller choose crypto algs/sizes
 def init_receiver(state, sk, dh_pair, next_hk_s, next_hk_r):
@@ -57,6 +59,7 @@ def init_receiver(state, sk, dh_pair, next_hk_s, next_hk_r):
   state.recv_msg_no = 0
   state.prev_chain_len = 0
   state.skipped_mks = {}
+  state.event_counter = 0 
 
 def encrypt_msg(state, pt, associated_data, ):
   """Returns encrypted header and ciphertext for encrypted message.
@@ -105,6 +108,8 @@ def decrypt_msg(state, hdr_ct, ct, associated_data):
 
   pt = try_skipped_mks(state, hdr_ct, ct, associated_data)
   if pt != None:
+    update_event_counter(state) # successful decrypt event
+    delete_old_skipped_mks(state)
     return pt
   
   old_state = copy(state)
@@ -131,12 +136,15 @@ def decrypt_msg(state, hdr_ct, ct, associated_data):
   state.ck_r, mk = ratchet_chain(state.ck_r)
   state.recv_msg_no += 1
 
-  pt, ret = decrypt_gcm(mk, ct, associated_data + hdr_ct)
+  pt_bytes, ret = decrypt_gcm(mk, ct, associated_data + hdr_ct)
   if ret != CRYPTO_RET.SUCCESS:
     restore_decrypt_state(state, old_state)
     return None
 
-  return pt.decode("utf-8")
+  update_event_counter(state) # successful decrypt event
+  delete_old_skipped_mks(state)
+  
+  return pt_bytes.decode("utf-8")
 
 # ----------------------------------------------------------------------------
 # Private
@@ -149,16 +157,16 @@ def decrypt_msg(state, hdr_ct, ct, associated_data):
 def try_skipped_mks(state, hdr_ct, ct, associated_data):
   for ((hk_r, msg_no), mk) in state.skipped_mks.items():
     # FIXME: header needs AAD
-    hdr_pt, ret = decrypt_gcm(hk_r, hdr_ct, None)
-    header = header_from_bytes(hdr_pt)
+    hdr_pt_bytes, ret = decrypt_gcm(hk_r, hdr_ct, None)
+    header = header_from_bytes(hdr_pt_bytes)
     
     if ret == CRYPTO_RET.SUCCESS and header.msg_no == msg_no:
       del state.skipped_mks[(hk_r, msg_no)]
 
-      pt, ret = decrypt_gcm(
+      pt_bytes, ret = decrypt_gcm(
         mk, ct, associated_data + hdr_ct)
       if ret == CRYPTO_RET.SUCCESS:
-        return pt.decode("utf-8")
+        return pt_bytes.decode("utf-8")
 
   return None
 
@@ -168,13 +176,13 @@ def try_skipped_mks(state, hdr_ct, ct, associated_data):
 def decrypt_header(state, hdr_ct):
   # FIXME: header needs AAD
   if state.hk_r != None: # may not have ratcheted yet
-    hdr_pt, ret = decrypt_gcm(state.hk_r, hdr_ct, None)
+    hdr_pt_bytes, ret = decrypt_gcm(state.hk_r, hdr_ct, None)
     if ret == CRYPTO_RET.SUCCESS:
-      return header_from_bytes(hdr_pt), False
+      return header_from_bytes(hdr_pt_bytes), False
   # FIXME: header needs AAD
-  hdr_pt, ret = decrypt_gcm(state.next_hk_r, hdr_ct, None)
+  hdr_pt_bytes, ret = decrypt_gcm(state.next_hk_r, hdr_ct, None)
   if ret == CRYPTO_RET.SUCCESS:
-    header = header_from_bytes(hdr_pt)
+    header = header_from_bytes(hdr_pt_bytes)
     return header, True
   raise Exception("Error: invalid header ciphertext.")
 
@@ -183,10 +191,14 @@ def decrypt_header(state, hdr_ct):
 # Raises exception on error.
 def skip_over_mks(state, end_msg_no):
   if state.recv_msg_no + MAX_SKIP < end_msg_no:
-    raise Exception("Error: invalid end message number.")
+    raise Exception("Error: end message number out of range.")
   elif state.ck_r != None:
     while state.recv_msg_no < end_msg_no:
       state.ck_r, mk = ratchet_chain(state.ck_r)
+
+      if len(state.skipped_mks) == MAX_SKIP: # delete oldest key to make space
+        del state.skipped_mks[next(iter(state.skipped_mks))]
+
       state.skipped_mks[(state.hk_r, state.recv_msg_no)] = mk
       state.recv_msg_no += 1
 
@@ -204,3 +216,21 @@ def dh_ratchet(state, peer_pk):
   state.prev_chain_len = state.send_msg_no
   state.send_msg_no = 0
   state.recv_msg_no = 0
+
+# Update state event counter. If skipped messages do not exist then
+# event counter is reset until 
+def update_event_counter(state):
+  assert(isinstance(state, RatchetState))
+
+  if len(state.skipped_mks) == 0:
+    state.event_counter = 0
+  else:
+    state.event_counter = (state.event_counter + 1) % DELETE_EVENT_NUM
+
+# Deletes oldest skipped mk after DELETE_EVENT_NUM events.
+# Ensures mks aren't stored indefinitely.
+def delete_old_skipped_mks(state):
+  assert(isinstance(state, RatchetState))
+
+  if len(state.skipped_mks) != 0 and state.event_counter % DELETE_EVENT_NUM == 0:
+    del state.skipped_mks[next(iter(state.skipped_mks))]

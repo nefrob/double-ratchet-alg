@@ -21,7 +21,7 @@ Built using Python 3.8.2.
 - ~~Handle missing/skipped messages~~
 - ~~Test basic cross user ratchet steps~~
 - ~~Header encryption~~
-- Delete skipped msg keys after time or msgs received count
+- ~~Delete skipped msg keys after time or ratchet events (ex. successful decrypt)~~
 - Deferred ratchet keygen until send time
 - Reduce transmitted message size (AES-GCM IV from HDKF?, truncate AES-CCM HMAC tag)
 - Allow choosing of hash/alg types, key size etc.

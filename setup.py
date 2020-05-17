@@ -12,7 +12,6 @@ setup(
     author_email="rneff@cs.stanford.edu",
     url="https://github.com/nefrob/double-ratchet-alg",
     zip_safe = False,
-    install_requires=[
-        'cryptography'
-    ]
+    install_requires=['cryptography'],
+    python_requires='>=3.7'
 )
