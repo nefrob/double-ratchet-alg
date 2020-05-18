@@ -27,12 +27,12 @@ def init_sender(state, sk, peer_pk, hk_s, next_hk_r):
 
   state.dh_pair = gen_dh_keys()
   state.peer_pk = peer_pk
-  state.rk, state.ck_s, state.next_hk_s = ratchet_root(
-    get_dh_out(state.dh_pair, peer_pk), sk)
+  state.rk = sk
   state.ck_r = None
   state.hk_s = hk_s
   state.hk_r = None
   state.next_hk_r = next_hk_r
+  state.delayed_send_ratchet = True
   state.send_msg_no = 0
   state.recv_msg_no = 0
   state.prev_chain_len = 0
@@ -56,6 +56,7 @@ def init_receiver(state, sk, dh_pair, next_hk_s, next_hk_r):
   state.hk_r = None
   state.next_hk_s = next_hk_s
   state.next_hk_r = next_hk_r
+  state.delayed_send_ratchet = False
   state.send_msg_no = 0
   state.recv_msg_no = 0
   state.prev_chain_len = 0
@@ -71,6 +72,11 @@ def encrypt_msg(state, pt, associated_data):
   assert(isinstance(state, RatchetState))
   assert(isinstance(pt, str))
   assert(isinstance(associated_data, bytes))
+
+  if state.delayed_send_ratchet:
+    state.rk, state.ck_s, state.next_hk_s = ratchet_root(
+      get_dh_out(state.dh_pair, state.peer_pk), state.rk)
+    state.delayed_send_ratchet = False
 
   old_ck = state.ck_s
   old_msg_no = state.send_msg_no
@@ -220,14 +226,17 @@ def skip_over_mks(state, end_msg_no):
 # Performs DH-ratchet step, updating the root chain twice and
 # so resetting sending/receiving chains.
 def dh_ratchet(state, peer_pk):
+  if state.delayed_send_ratchet: 
+    state.rk, state.ck_s, state.next_hk_s = ratchet_root(
+      get_dh_out(state.dh_pair, state.peer_pk), state.rk)
+
   state.peer_pk = peer_pk
   state.hk_s = state.next_hk_s
   state.hk_r = state.next_hk_r
   state.rk, state.ck_r, state.next_hk_r = ratchet_root(
     get_dh_out(state.dh_pair, state.peer_pk), state.rk)
   state.dh_pair = gen_dh_keys()
-  state.rk, state.ck_s, state.next_hk_s = ratchet_root(
-    get_dh_out(state.dh_pair, state.peer_pk), state.rk)
+  state.delayed_send_ratchet = True
   state.prev_chain_len = state.send_msg_no
   state.send_msg_no = 0
   state.recv_msg_no = 0

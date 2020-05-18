@@ -15,6 +15,7 @@ class RatchetState:
     self.hk_r = None
     self.next_hk_s = None
     self.next_hk_r = None
+    self.delayed_send_ratchet = False
     self.send_msg_no = 0
     self.recv_msg_no = 0
     self.prev_chain_len = 0

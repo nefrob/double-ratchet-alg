@@ -41,6 +41,7 @@ def restore_decrypt_state(state, old_state):
   state.hk_r = old_state.hk_r
   state.next_hk_s = old_state.next_hk_s
   state.next_hk_r = old_state.next_hk_r
+  state.delayed_send_ratchet = old_state.delayed_send_ratchet
   state.send_msg_no = old_state.send_msg_no
   state.recv_msg_no = old_state.recv_msg_no
   state.prev_chain_len = old_state.prev_chain_len
