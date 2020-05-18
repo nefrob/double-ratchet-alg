@@ -15,26 +15,32 @@ Built using Python 3.8.2.
 
 ### Tasks:
 
+ Main:
+
 - ~~Find crypto lib~~
 - ~~Implement Signal spec double ratchet crypto functions~~
-- ~~Add minor error checking to crypto~~
+- ~~Add some error checking to crypto~~
 - ~~Handle missing/skipped messages~~
 - ~~Test basic cross user ratchet steps~~
 - ~~Header encryption~~
 - ~~Delete skipped msg keys after time or ratchet events (ex. successful decrypt)~~
-- Deferred ratchet keygen until send time
+- ~~Deferred ratchet keygen until send time~~
+
+Cleanup:
+
 - Reduce transmitted message size (AES-GCM IV from HDKF?, truncate AES-CCM HMAC tag)
-- Allow choosing of hash/alg types, key size etc.
+- Allow choosing of hash/alg types, key size etc
+- Fix FIXMEs
 - Add debug logging?
 - Add documentation
 - Setup session/users/state + cleanup interface
 
-Extra options:
+Next options:
 
 - Maybe integrate with X3HD
 - Fingerprinting support
-- Add backdoor?
-- Multiparty communication just multi pairwise?
+- Add backdoor? :/
+- Multiparty communication or just ust multi pairwise?
 - Checkout [Lime](https://gitlab.linphone.org/BC/public/lime/blob/master/lime.pdf) and [OMEMO](https://xmpp.org/extensions/xep-0384.html) for potential updates.
 
 ### Questions?
