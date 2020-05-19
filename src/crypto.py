@@ -53,7 +53,7 @@ def ratchet_root(dh_out: bytes, rk: bytes,
   )
 
   hkdf_out = hkdf.derive(dh_out)
-  return hkdf_out[:key_len], hkdf_out[key_len:2*key_len], hkdf_out[-key_len:] 
+  return hkdf_out[:key_len], hkdf_out[key_len:2*key_len], hkdf_out[2*key_len:] 
 
 # Ratchet and return new chain key and message key.
 def ratchet_chain(ck: bytes, hash_alg: hashes.HashAlgorithm = DEFAULT_HASH_ALG):
