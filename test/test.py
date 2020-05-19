@@ -6,29 +6,29 @@ import os
 import random as rand
 import unittest
 
-import src.crypto as crypto
+from src.session import *
 from src.crypto_utils import rand_str
-import src.ratchet as ratchet
-from src.state import RatchetState, MsgHeader
-
+from src.message import Message
+from src.crypto import DEFAULT_KEY_BYTES
+from src.ratchet import dh_ratchet_he, DELETE_MIN_EVENTS, MAX_SKIP
 
 # Create test user state.
 def create_user(sk, dh_pair, hk1, hk2, is_sender = True):
-  usr = RatchetState()
+  user = DRSessionHE()
   if is_sender:
-    ratchet.init_sender(usr, sk, dh_pair.public_key(), hk1, hk2)
+    user.setup_sender(sk, dh_pair.public_key(), hk1, hk2)
   else:
-    ratchet.init_receiver(usr, sk, dh_pair, hk2, hk1)
+    user.setup_receiver(sk, dh_pair, hk2, hk1)
 
-  return usr
+  return user
 
 # Simple sender/receiver user setup.
 def setup_convo():
-  sk = os.urandom(crypto.DEFAULT_KEY_BYTES)
-  hk1 = os.urandom(crypto.DEFAULT_KEY_BYTES)
-  hk2 = os.urandom(crypto.DEFAULT_KEY_BYTES)
+  sk = os.urandom(DEFAULT_KEY_BYTES)
+  hk1 = os.urandom(DEFAULT_KEY_BYTES)
+  hk2 = os.urandom(DEFAULT_KEY_BYTES)
 
-  recv_dh = crypto.gen_dh_keys()
+  recv_dh = generate_dh_keys()
   initial_sender = create_user(sk, recv_dh, hk1, hk2)
   initial_receiver = create_user(sk, recv_dh, hk1, hk2, is_sender=False)
 
@@ -36,23 +36,23 @@ def setup_convo():
 
 # Encrypt message from sender.
 def send_encrypt(sender):
-  msg = rand_str(rand.randint(0, 100))
+  pt = rand_str(rand.randint(0, 100))
   data = os.urandom(rand.randint(0, 100))
 
-  hdr, ct = ratchet.encrypt_msg(sender, msg, data)
-  return msg, data, hdr, ct
+  msg = sender.encrypt_message(pt, data)
+  return pt, data, msg
 
 # Decrypt message as receiver.
-def recv_decrypt(self, receiver, msg, data, hdr, ct):
-  pt = ratchet.decrypt_msg(receiver, hdr, ct, data)
+def recv_decrypt(self, receiver, original_pt, data, msg):
+  pt = receiver.decrypt_message(msg, data)
 
   self.assertIsNotNone(pt)
-  self.assertEqual(pt, msg)
+  self.assertEqual(pt, original_pt)
 
 # Encrypt/decrypt message between two users.
 def send_recv(self, sender, receiver):
-  msg, data, hdr, ct = send_encrypt(sender)
-  recv_decrypt(self, receiver, msg, data, hdr, ct)
+  pt, data, msg = send_encrypt(sender)
+  recv_decrypt(self, receiver, pt, data, msg)
 
 
 '''
@@ -61,14 +61,14 @@ Unit tests.
 class RatchetTests(unittest.TestCase):
   # Test encrypt message
   def test_encrypt(self):
-    usr = create_user(os.urandom(crypto.DEFAULT_KEY_BYTES), 
-      crypto.gen_dh_keys(),
-      os.urandom(crypto.DEFAULT_KEY_BYTES),
-      os.urandom(crypto.DEFAULT_KEY_BYTES))
-    hdr, ct = ratchet.encrypt_msg(usr, "pt", b"data")
+    user = create_user(os.urandom(DEFAULT_KEY_BYTES), 
+      generate_dh_keys(),
+      os.urandom(DEFAULT_KEY_BYTES),
+      os.urandom(DEFAULT_KEY_BYTES))
+    msg = user.encrypt_message("pt", b"data")
 
-    self.assertIsNotNone(hdr)
-    self.assertIsNotNone(ct)
+    self.assertIsNotNone(msg.hdr_ct)
+    self.assertIsNotNone(msg.ct)
 
   # Test decrypt message
   def test_decrypt(self):
@@ -96,37 +96,36 @@ class RatchetTests(unittest.TestCase):
   def test_out_of_order_single(self):
     a, b = setup_convo()
     
-    msg1, data1, hdr1, ct1 = send_encrypt(a)
-    msg2, data2, hdr2, ct2 = send_encrypt(a)
-    msg3, data3, hdr3, ct3 = send_encrypt(a)
+    pt1, data1, msg1 = send_encrypt(a)
+    pt2, data2, msg2 = send_encrypt(a)
+    pt3, data3, msg3 = send_encrypt(a)
 
-    recv_decrypt(self, b, msg2, data2, hdr2, ct2)
-    recv_decrypt(self, b, msg3, data3, hdr3, ct3)
-    recv_decrypt(self, b, msg1, data1, hdr1, ct1)
+    recv_decrypt(self, b, pt2, data2, msg2)
+    recv_decrypt(self, b, pt3, data3, msg3)
+    recv_decrypt(self, b, pt1, data1, msg1)
 
   # Test out of order messages with DH ratchet step
   def test_out_of_order_ratchet(self):
     a, b = setup_convo()
 
-    msg1, data1, hdr1, ct1 = send_encrypt(a)
-    recv_decrypt(self, b, msg1, data1, hdr1, ct1)
-    msg2, data2, hdr2, ct2 = send_encrypt(a)
+    pt1, data1, msg1 = send_encrypt(a)
+    recv_decrypt(self, b, pt1, data1, msg1)
+    pt2, data2, msg2 = send_encrypt(a)
 
     # Simulate receiving new public key from B
-    ratchet.dh_ratchet(a, b.dh_pair.public_key())
+    dh_ratchet_he(a.state, b.state.dh_pair.public_key())
 
-    msg3, data3, hdr3, ct3 = send_encrypt(a)
-    recv_decrypt(self, b, msg3, data3, hdr3, ct3)
-    recv_decrypt(self, b, msg2, data2, hdr2, ct2)
+    pt3, data3, msg3 = send_encrypt(a)
+    recv_decrypt(self, b, pt3, data3, msg3)
+    recv_decrypt(self, b, pt2, data2, msg2)
 
   # Test replayed messages rejected
   def test_replay(self):
     a, b = setup_convo()
   
-    msg, data, hdr, ct = send_encrypt(a)
-    recv_decrypt(self, b, msg, data, hdr, ct)
-    pt = ratchet.decrypt_msg(b, hdr, ct, data)
-    self.assertIsNone(pt)
+    pt, data, msg = send_encrypt(a)
+    recv_decrypt(self, b, pt, data, msg)
+    self.assertRaises(Exception, b.decrypt_message, msg, data)
 
     # Check state restored correctly and can send/recv
     send_recv(self, a, b)
@@ -135,44 +134,41 @@ class RatchetTests(unittest.TestCase):
   def test_tampering(self):
     a, b = setup_convo()
   
-    msg, data, hdr, ct = send_encrypt(a)
-    pt = ratchet.decrypt_msg(b, hdr, ct, b"tamper")
-    self.assertIsNone(pt)
+    pt, data, msg = send_encrypt(a)
+    self.assertRaises(Exception, b.decrypt_message, msg, b"tamper")
 
     # Check state restored correctly and decrypt
-    recv_decrypt(self, b, msg, data, hdr, ct)
+    recv_decrypt(self, b, pt, data, msg)
 
   # Test old skipped mks deleted when skipped dict full
   def test_skipped_mks_del(self):
     a, b = setup_convo()
     
-    _, data1, hdr1, ct1 = send_encrypt(a)
-    msg2, data2, hdr2, ct2 = send_encrypt(a)
-    for i in range(ratchet.MAX_SKIP - 2):
+    pt1, data1, msg1 = send_encrypt(a)
+    pt2, data2, msg2 = send_encrypt(a)
+    for i in range(MAX_SKIP - 2):
       send_encrypt(a)
     
     send_recv(self, a, b) # msg 1001, gens 1000 skipped keys
     send_encrypt(a)
     send_recv(self, a, b) # 1003, gens new skipped, deletes first skipped
-    
-    pt = ratchet.decrypt_msg(b, hdr1, ct1, data1) # fails
-    self.assertIsNone(pt)
+
+    self.assertRaises(Exception, b.decrypt_message, msg1, data1)
       
-    recv_decrypt(self, b, msg2, data2, hdr2, ct2) # still succeeds
+    recv_decrypt(self, b, pt2, data2, msg2) # still succeeds
 
   # Test old skipped mks deleted after num events
   def test_skipped_mks_event_del(self):
     a, b = setup_convo()
     
-    msg1, data1, hdr1, ct1 = send_encrypt(a)
-    msg2, data2, hdr2, ct2 = send_encrypt(a)
-    for i in range(ratchet.DELETE_MIN_EVENTS): # increment even counter
+    pt1, data1, msg1 = send_encrypt(a)
+    pt2, data2, msg2 = send_encrypt(a)
+    for i in range(DELETE_MIN_EVENTS): # increment even counter
       send_recv(self, a, b)
     
-    pt = ratchet.decrypt_msg(b, hdr1, ct1, data1) # fails
-    self.assertIsNone(pt)
+    self.assertRaises(Exception, b.decrypt_message, msg1, data1)
     
-    recv_decrypt(self, b, msg2, data2, hdr2, ct2) # still succeeds
+    recv_decrypt(self, b, pt2, data2, msg2) # still succeeds
 
   # TODO: for future when multiparty supported
 

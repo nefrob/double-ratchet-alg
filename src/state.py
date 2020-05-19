@@ -1,43 +1,54 @@
-from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
-
-from .crypto_utils import pk_to_bytes
-
-
 # State for a party in double-ratchet algorithm.
-class RatchetState:
+class State:
   def __init__(self):
     self.dh_pair = None
-    self.peer_pk = None
+    self.dh_pk_r = None
+
     self.rk = None
     self.ck_s = None 
     self.ck_r = None
+
     self.hk_s = None
     self.hk_r = None
     self.next_hk_s = None
     self.next_hk_r = None
-    self.delayed_send_ratchet = False
+
     self.send_msg_no = 0
     self.recv_msg_no = 0
     self.prev_chain_len = 0
+    
+    self.delayed_send_ratchet = False
+
     self.skipped_mks = None
     self.skipped_lifetimes = []
 
 
-# Header for ratchet chain message.
-class MsgHeader:
-  def __init__(self, pk, prev_chain_len, msg_no):
-    assert(isinstance(pk, X448PublicKey))
+# Restore old state to state object.
+#
+# FIXME: we cannot simply assign or it will change ref'd state obj.
+# Alternatively we could return new state (i.e. old_state) but this
+# will require reconstruction in decrypt ...
+def restore_old_state(state: State, old_state: State):
+  assert(isinstance(state, State))
+  assert(isinstance(old_state, State))
 
-    self.pk = pk
-    self.prev_chain_len = prev_chain_len
-    self.msg_no = msg_no
+  state.dh_pair = old_state.dh_pair
+  state.dh_pk_r = old_state.dh_pk_r
 
-  def __bytes__(self):
-    key_bytes = pk_to_bytes(self.pk)
-    return key_bytes + self.prev_chain_len.to_bytes(2, byteorder='little') \
-      + self.msg_no.to_bytes(2, byteorder='little')
+  state.rk = old_state.rk
+  state.ck_s = old_state.ck_s
+  state.ck_r = old_state.ck_r
 
-  def __str__(self):
-    key_str = str(pk_to_bytes(self.pk))[2:-1] # skip starting "b'" and ending "'"
-    return key_str + "," + str(self.prev_chain_len) + "," + str(self.msg_no)
-  
+  state.hk_s = old_state.hk_s
+  state.hk_r = old_state.hk_r
+  state.next_hk_s = old_state.next_hk_s
+  state.next_hk_r = old_state.next_hk_r
+
+  state.send_msg_no = old_state.send_msg_no
+  state.recv_msg_no = old_state.recv_msg_no
+  state.prev_chain_len = old_state.prev_chain_len
+
+  state.delayed_send_ratchet = old_state.delayed_send_ratchet
+
+  state.skipped_mks = old_state.skipped_mks
+  state.skipped_lifetimes = old_state.skipped_lifetimes

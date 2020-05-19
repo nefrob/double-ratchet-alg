@@ -30,15 +30,17 @@ def gen_dh_keys():
   return X448PrivateKey.generate()
 
 # Return DH output of dh_pair private key and peer public key.
-def get_dh_out(dh_pair, peer_pk):
+def get_dh_out(dh_pair: X448PrivateKey, dh_pk_r: X448PublicKey):
   assert(isinstance(dh_pair, X448PrivateKey))
-  assert(isinstance(peer_pk, X448PublicKey))
-  return dh_pair.exchange(peer_pk)
+  assert(isinstance(dh_pk_r, X448PublicKey))
+
+  return dh_pair.exchange(dh_pk_r)
 
 # Ratchet and return new root key, chain key and next header key.
 # Note: Since KDF is PRF we can split output into separate keys.
-def ratchet_root(dh_out, rk, hash_alg = DEFAULT_HASH_ALG, 
-                 key_len = DEFAULT_KEY_BYTES):
+def ratchet_root(dh_out: bytes, rk: bytes, 
+    hash_alg: hashes.HashAlgorithm = DEFAULT_HASH_ALG, 
+    key_len: int = DEFAULT_KEY_BYTES):
   assert(isinstance(dh_out, bytes))
   assert(isinstance(rk, bytes))
 
@@ -54,12 +56,13 @@ def ratchet_root(dh_out, rk, hash_alg = DEFAULT_HASH_ALG,
   return hkdf_out[:key_len], hkdf_out[key_len:2*key_len], hkdf_out[-key_len:] 
 
 # Ratchet and return new chain key and message key.
-def ratchet_chain(ck, hash_alg = DEFAULT_HASH_ALG):
+def ratchet_chain(ck: bytes, hash_alg: hashes.HashAlgorithm = DEFAULT_HASH_ALG):
   return compute_hmac(ck, b"ck_ratchet", hash_alg), \
     compute_hmac(ck, b"mk_ratchet", hash_alg)
 
 # Computes HMAC with given key on data.
-def compute_hmac(key, data, hash_alg = DEFAULT_HASH_ALG):
+def compute_hmac(key: bytes, data: bytes,
+    hash_alg: hashes.HashAlgorithm = DEFAULT_HASH_ALG):
   assert(isinstance(key, bytes))
   assert(isinstance(data, bytes))
 
@@ -74,7 +77,8 @@ def compute_hmac(key, data, hash_alg = DEFAULT_HASH_ALG):
 # Return AEAD encryption of plain text with key.
 # Note: Uses AES-GCM instead of Signal spec AES-CBC with HMAC-SHA256
 # to reduce complexity and so room for error.
-def encrypt_gcm(key, pt, associated_data, iv_len = DEFAULT_IV_BYTES):
+def encrypt_gcm(key: bytes, pt: bytes, associated_data: bytes, 
+    iv_len: int = DEFAULT_IV_BYTES):
   assert(isinstance(key, bytes))
   assert(isinstance(pt, bytes))
   assert((isinstance(associated_data, bytes) or associated_data == None))
@@ -91,8 +95,9 @@ def encrypt_gcm(key, pt, associated_data, iv_len = DEFAULT_IV_BYTES):
 # Return AEAD encryption of plain text with key.
 # Note: Cannot be used for header encryption since key remains same
 # for multiple messages so HKDF will output same.
-def encrypt_ccm(key, pt, associated_data, hash_alg = DEFAULT_HASH_ALG,
-    key_len = DEFAULT_KEY_BYTES):
+def encrypt_ccm(key: bytes, pt: bytes, associated_data: bytes, 
+    hash_alg: hashes.HashAlgorithm = DEFAULT_HASH_ALG,
+    key_len: int = DEFAULT_KEY_BYTES):
   assert(isinstance(key, bytes))
   assert(isinstance(pt, bytes))
   assert((isinstance(associated_data, bytes) or associated_data == None))
@@ -125,7 +130,8 @@ def encrypt_ccm(key, pt, associated_data, hash_alg = DEFAULT_HASH_ALG,
 # Raises exception on authentication failure.
 # Note: Uses AES-GCM instead of Signal spec AES-CBC with HMAC-SHA256
 # to reduce complexity and so room for error.
-def decrypt_gcm(key, ct, associated_data, iv_len = DEFAULT_IV_BYTES):
+def decrypt_gcm(key: bytes, ct: bytes, associated_data: bytes,
+    iv_len: int = DEFAULT_IV_BYTES):
   assert(isinstance(key, bytes))
   assert(isinstance(ct, bytes))
   assert((isinstance(associated_data, bytes) or associated_data == None))
@@ -142,8 +148,9 @@ def decrypt_gcm(key, ct, associated_data, iv_len = DEFAULT_IV_BYTES):
 # Raises exception on authentication failure.
 # Note: Cannot be used for header encryption since key remains same
 # for multiple messages so HKDF will output same.
-def decrypt_ccm(key, ct, associated_data, hash_alg = DEFAULT_HASH_ALG,
-    key_len = DEFAULT_KEY_BYTES):
+def decrypt_ccm(key: bytes, ct: bytes, associated_data: bytes, 
+    hash_alg: hashes.HashAlgorithm = DEFAULT_HASH_ALG,
+    key_len: int = DEFAULT_KEY_BYTES):
   assert(isinstance(key, bytes))
   assert(isinstance(ct, bytes))
   assert((isinstance(associated_data, bytes) or associated_data == None))
