@@ -141,7 +141,7 @@ def ratchet_encrypt(state: State, pt: str, associated_data: bytes):
     state.prev_chain_len, state.send_msg_no)
   state.send_msg_no += 1
 
-  ct, ret = encrypt_gcm(mk, pt.encode("utf-8"), associated_data + bytes(header))
+  ct, ret = encrypt_cbc(mk, pt.encode("utf-8"), associated_data + bytes(header))
   if ret != CRYPTO_RET.SUCCESS: # restore state on fail
     state.ck_r = old_ck
     state.send_msg_no = old_msg_no
@@ -166,7 +166,7 @@ def ratchet_encrypt_he(state: State, pt: str, associated_data: bytes):
   state.ck_s, mk = ratchet_chain(state.ck_s)
   header = Header(state.dh_pair.public_key(), 
     state.prev_chain_len, state.send_msg_no)
-  hdr_ct, ret = encrypt_gcm(state.hk_s, bytes(header), b"")
+  hdr_ct, ret = encrypt_cbc(state.hk_s, bytes(header), b"")
 
   if ret != CRYPTO_RET.SUCCESS: # restore state on fail
     state.ck_r = old_ck 
@@ -175,7 +175,7 @@ def ratchet_encrypt_he(state: State, pt: str, associated_data: bytes):
 
   state.send_msg_no += 1
 
-  ct, ret = encrypt_gcm(mk, pt.encode("utf-8"), associated_data + hdr_ct)
+  ct, ret = encrypt_cbc(mk, pt.encode("utf-8"), associated_data + hdr_ct)
   if ret != CRYPTO_RET.SUCCESS: # restore state on fail
     state.ck_r = old_ck
     state.send_msg_no = old_msg_no
@@ -217,7 +217,7 @@ def ratchet_decrypt(state: State, msg: Message, associated_data: bytes):
   state.ck_r, mk = ratchet_chain(state.ck_r)
   state.recv_msg_no += 1
 
-  pt_bytes, ret = decrypt_gcm(mk, msg.ct, associated_data + bytes(msg.header))
+  pt_bytes, ret = decrypt_cbc(mk, msg.ct, associated_data + bytes(msg.header))
   if ret != CRYPTO_RET.SUCCESS:
     restore_old_state(state, old_state)
     return None
@@ -266,7 +266,7 @@ def ratchet_decrypt_he(state: State, msg: MessageHE, associated_data: bytes):
   state.ck_r, mk = ratchet_chain(state.ck_r)
   state.recv_msg_no += 1
 
-  pt_bytes, ret = decrypt_gcm(mk, msg.ct, associated_data + msg.hdr_ct)
+  pt_bytes, ret = decrypt_cbc(mk, msg.ct, associated_data + msg.hdr_ct)
   if ret != CRYPTO_RET.SUCCESS:
     restore_old_state(state, old_state)
     return None
@@ -291,7 +291,7 @@ def try_skipped_mks(state: State, header: Header, ct: bytes,
     mk = state.skipped_mks[(hdr_pk_bytes, header.msg_no)]
     del state.skipped_mks[(hdr_pk_bytes, header.msg_no)]
 
-    pt_bytes, ret = decrypt_gcm(
+    pt_bytes, ret = decrypt_cbc(
       mk, ct, associated_data + bytes(header))
     if ret == CRYPTO_RET.SUCCESS:
       return pt_bytes.decode("utf-8")
@@ -309,14 +309,14 @@ def try_skipped_mks_he(state: State, hdr_ct: bytes, ct: bytes,
 
   i = 0
   for ((hk_r, msg_no), mk) in state.skipped_mks.items():
-    hdr_pt_bytes, ret = decrypt_gcm(hk_r, hdr_ct, b"")
+    hdr_pt_bytes, ret = decrypt_cbc(hk_r, hdr_ct, b"")
     header = header_from_bytes(hdr_pt_bytes)
     
     if ret == CRYPTO_RET.SUCCESS and header.msg_no == msg_no:
       del state.skipped_mks[(hk_r, msg_no)]
       state.skipped_lifetimes.pop(i)
 
-      pt_bytes, ret = decrypt_gcm(
+      pt_bytes, ret = decrypt_cbc(
         mk, ct, associated_data + hdr_ct)
       if ret == CRYPTO_RET.SUCCESS:
         return pt_bytes.decode("utf-8")
@@ -335,11 +335,11 @@ def decrypt_header(state: State, hdr_ct):
   assert(isinstance(hdr_ct, bytes))
 
   if state.hk_r != None: # may not have ratcheted yet
-    hdr_pt_bytes, ret = decrypt_gcm(state.hk_r, hdr_ct, b"")
+    hdr_pt_bytes, ret = decrypt_cbc(state.hk_r, hdr_ct, b"")
     if ret == CRYPTO_RET.SUCCESS:
       return header_from_bytes(hdr_pt_bytes), False
 
-  hdr_pt_bytes, ret = decrypt_gcm(state.next_hk_r, hdr_ct, b"")  
+  hdr_pt_bytes, ret = decrypt_cbc(state.next_hk_r, hdr_ct, b"")  
   if ret == CRYPTO_RET.SUCCESS:
     return header_from_bytes(hdr_pt_bytes), True
 

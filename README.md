@@ -17,9 +17,10 @@ Parties send Diffie-Hellman public keys with each message, which when changed ca
   
   - `KDF_CK(ck)`: implemented using `HMAC` with `SHA256` per spec.
 
-  - `ENCRYPT(mk, plaintext, associated_data)`: implemented with `AES256-GCM` with random `16` \-byte `IV`.  
-  
-    There is also an implementation using `HKDF` to generate `aes_key`, `hmac_key` and `IV` for `AES256-CBC` with `HMAC-SHA256` authentication tag (`associated_data||ciphertext`). However the `cryptography` library only supports IVs up to length `13` bytes for `AES256-CBC`. As such this version is currently unused.
+  - `ENCRYPT(mk, plaintext, associated_data)`: implementated using `HKDF` to generate  `aes_key`, `hmac_key` and `IV` for `AES256-CBC` with `HMAC-SHA256` authentication tag (`associated_data||ciphertext`). Plaintext is padded via `PKCS7` before encryption.  
+
+    `AES256-GCM` with random `IV` implementation is also available.
+
 
   - Encryption of headers using header key MUST use a new IV each time as the header keys remain the same for multiple messages (i.e. are not part of the KDF chains), updating only after a DH-ratchet step. 
 
@@ -93,4 +94,4 @@ Cleanup:
 Where to go next:
 
 - Integration with X3HD protocol
-- Checkout [Lime](https://gitlab.linphone.org/BC/public/lime/blob/master/lime.pdf) and [OMEMO](https://xmpp.org/extensions/xep-0384.html) for potential updates
+- Maybe checkout [Lime](https://gitlab.linphone.org/BC/public/lime/blob/master/lime.pdf) and [OMEMO](https://xmpp.org/extensions/xep-0384.html) for potential updates

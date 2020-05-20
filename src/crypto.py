@@ -1,9 +1,10 @@
 from enum import Enum
 from secrets import token_bytes
 
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM, AESCCM
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.hmac import HMAC
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
@@ -13,7 +14,6 @@ from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448P
 X448_KEY_BYTES = 56 # per cryptography lib
 DEFAULT_KEY_BYTES = 32
 DEFAULT_IV_BYTES = 16
-CCM_MAX_IV_BYTES = 13
 DEFAULT_HASH_ALG = hashes.SHA256()
 
 
@@ -95,7 +95,7 @@ def encrypt_gcm(key: bytes, pt: bytes, associated_data: bytes,
 # Return AEAD encryption of plain text with key.
 # Note: Cannot be used for header encryption since key remains same
 # for multiple messages so HKDF will output same.
-def encrypt_ccm(key: bytes, pt: bytes, associated_data: bytes, 
+def encrypt_cbc(key: bytes, pt: bytes, associated_data: bytes, 
     hash_alg: hashes.HashAlgorithm = DEFAULT_HASH_ALG,
     key_len: int = DEFAULT_KEY_BYTES):
   assert(isinstance(key, bytes))
@@ -104,7 +104,7 @@ def encrypt_ccm(key: bytes, pt: bytes, associated_data: bytes,
 
   hkdf = HKDF(
     algorithm=hash_alg,
-    length=key_len * 2 + min(DEFAULT_IV_BYTES, CCM_MAX_IV_BYTES),
+    length=key_len * 2 + DEFAULT_IV_BYTES,
     salt=bytes(hash_alg.digest_size),
     info=b"ccm_keys",
     backend=default_backend()
@@ -113,12 +113,19 @@ def encrypt_ccm(key: bytes, pt: bytes, associated_data: bytes,
   hkdf_out = hkdf.derive(key)
   aes_key = hkdf_out[:key_len]
   auth_key = hkdf_out[key_len:2*key_len]
-  iv = hkdf_out[-key_len:]
+  iv = hkdf_out[-DEFAULT_IV_BYTES:]
 
   try:
-    # FIXME: verify AESCCM uses PKCS#7 padding
-    aesccm = AESCCM(aes_key)
-    ct = aesccm.encrypt(iv, pt, associated_data)
+    padder = padding.PKCS7(DEFAULT_IV_BYTES * 8).padder()
+    padded_pt = padder.update(pt) + padder.finalize()
+
+    aes_cbc = Cipher(
+      algorithms.AES(aes_key),
+      modes.CBC(iv),
+      backend = default_backend()
+    ).encryptor()
+
+    ct = aes_cbc.update(padded_pt) + aes_cbc.finalize()
   except:
     return None, CRYPTO_RET.AES_DATA_TOO_LARGE
 
@@ -148,7 +155,7 @@ def decrypt_gcm(key: bytes, ct: bytes, associated_data: bytes,
 # Raises exception on authentication failure.
 # Note: Cannot be used for header encryption since key remains same
 # for multiple messages so HKDF will output same.
-def decrypt_ccm(key: bytes, ct: bytes, associated_data: bytes, 
+def decrypt_cbc(key: bytes, ct: bytes, associated_data: bytes, 
     hash_alg: hashes.HashAlgorithm = DEFAULT_HASH_ALG,
     key_len: int = DEFAULT_KEY_BYTES):
   assert(isinstance(key, bytes))
@@ -157,7 +164,7 @@ def decrypt_ccm(key: bytes, ct: bytes, associated_data: bytes,
 
   hkdf = HKDF(
     algorithm=hash_alg,
-    length=key_len * 2 + min(DEFAULT_IV_BYTES, CCM_MAX_IV_BYTES),
+    length=key_len * 2 + DEFAULT_IV_BYTES,
     salt=bytes(hash_alg.digest_size),
     info=b"ccm_keys",
     backend=default_backend()
@@ -166,13 +173,14 @@ def decrypt_ccm(key: bytes, ct: bytes, associated_data: bytes,
   hkdf_out = hkdf.derive(key)
   aes_key = hkdf_out[:key_len]
   auth_key = hkdf_out[key_len:2*key_len]
-  iv = hkdf_out[-key_len:]
+  iv = hkdf_out[-DEFAULT_IV_BYTES:]
 
   hmac = HMAC(
     auth_key,
     hash_alg,
     backend=default_backend()
   )
+
   try:
     hmac.update(associated_data + ct[:-hash_alg.digest_size])
     hmac.verify(ct[-hash_alg.digest_size:])
@@ -180,9 +188,16 @@ def decrypt_ccm(key: bytes, ct: bytes, associated_data: bytes,
     return None, CRYPTO_RET.HMAC_INVALID_TAG
 
   try:
-    # FIXME: verify AESCCM uses PKCS#7 padding
-    aesccm = AESCCM(aes_key)
-    pt = aesccm.decrypt(iv, ct[:-hash_alg.digest_size], associated_data)
+    unpadder = padding.PKCS7(DEFAULT_IV_BYTES * 8).unpadder()
+
+    aes_cbc = Cipher(
+      algorithms.AES(aes_key),
+      modes.CBC(iv),
+      backend = default_backend()
+    ).decryptor()
+
+    pt_padded = aes_cbc.update(ct[:-hash_alg.digest_size]) + aes_cbc.finalize()
+    pt = unpadder.update(pt_padded) + unpadder.finalize()
   except:
     return None, CRYPTO_RET.AES_INVALID_TAG
 
