@@ -8,31 +8,26 @@ import unittest
 
 from src.session import *
 from src.crypto_utils import rand_str
-from src.message import Message
 from src.crypto import DEFAULT_KEY_BYTES
 from src.ratchet import dh_ratchet_he, DELETE_MIN_EVENTS, MAX_SKIP
 
-# Create test user state.
-def create_user(sk, dh_pair, hk1, hk2, is_sender = True):
-  user = DRSessionHE()
-  if is_sender:
-    user.setup_sender(sk, dh_pair.public_key(), hk1, hk2)
-  else:
-    user.setup_receiver(sk, dh_pair, hk2, hk1)
 
-  return user
-
-# Simple sender/receiver user setup.
-def setup_convo():
+# Simple sender/receiver user setup, HE variant
+def setup_convo(): 
+  # Generate shared keys
   sk = os.urandom(DEFAULT_KEY_BYTES)
   hk1 = os.urandom(DEFAULT_KEY_BYTES)
   hk2 = os.urandom(DEFAULT_KEY_BYTES)
 
-  recv_dh = generate_dh_keys()
-  initial_sender = create_user(sk, recv_dh, hk1, hk2)
-  initial_receiver = create_user(sk, recv_dh, hk1, hk2, is_sender=False)
+  # Init sessions
+  receiver_dh_keys = generate_dh_keys()
+  receiver = DRSessionHE()
+  receiver.setup_receiver(sk, receiver_dh_keys, hk2, hk1)
 
-  return initial_sender, initial_receiver
+  sender = DRSessionHE()
+  sender.setup_sender(sk, receiver_dh_keys.public_key(), hk1, hk2)
+
+  return sender, receiver
 
 # Encrypt message from sender.
 def send_encrypt(sender):
@@ -61,14 +56,10 @@ Unit tests.
 class RatchetTests(unittest.TestCase):
   # Test encrypt message
   def test_encrypt(self):
-    user = create_user(os.urandom(DEFAULT_KEY_BYTES), 
-      generate_dh_keys(),
-      os.urandom(DEFAULT_KEY_BYTES),
-      os.urandom(DEFAULT_KEY_BYTES))
-    msg = user.encrypt_message("pt", b"data")
+    a, _ = setup_convo()
+    msg = a.encrypt_message("pt", b"data")
 
-    self.assertIsNotNone(msg.hdr_ct)
-    self.assertIsNotNone(msg.ct)
+    self.assertIsNotNone(msg)
 
   # Test decrypt message
   def test_decrypt(self):
@@ -113,7 +104,7 @@ class RatchetTests(unittest.TestCase):
     pt2, data2, msg2 = send_encrypt(a)
 
     # Simulate receiving new public key from B
-    dh_ratchet_he(a.state, b.state.dh_pair.public_key())
+    dh_ratchet_he(a.get_state(), b.get_state().dh_pair.public_key())
 
     pt3, data3, msg3 = send_encrypt(a)
     recv_decrypt(self, b, pt3, data3, msg3)

@@ -200,7 +200,7 @@ def ratchet_decrypt(state: State, msg: Message, associated_data: bytes):
   if not pks_equal(msg.header.dh_pk, state.dh_pk_r): 
     try:
       skip_over_mks(state, msg.header.prev_chain_len, 
-        state.dh_pk_r) # save mks from old recv chain
+        dh_pk_bytes(state.dh_pk_r)) # save mks from old recv chain
     except:
       restore_old_state(state, old_state)
       return None
@@ -209,7 +209,7 @@ def ratchet_decrypt(state: State, msg: Message, associated_data: bytes):
 
   try:
     skip_over_mks(state, msg.header.msg_no,
-      state.dh_pk_r) # save mks on new sending chain
+      dh_pk_bytes(state.dh_pk_r)) # save mks on new sending chain
   except:
     restore_old_state(state, old_state)
     return None
@@ -355,7 +355,7 @@ def skip_over_mks(state: State, end_msg_no: int, map_key: bytes):
 
   if state.recv_msg_no + MAX_SKIP < end_msg_no:
     raise Exception("Error: end message number out of range.")
-  elif state.ck_r != None and state.hk_r != None:
+  elif state.ck_r != None:
     while state.recv_msg_no < end_msg_no:
       state.ck_r, mk = ratchet_chain(state.ck_r)
 

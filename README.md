@@ -37,13 +37,13 @@ Built using Python 3.8.2.
 
 ## Usage
 
-### Example:
+### Example (header encryption variant):
 
 ```python
 import os
 import src.session as session # executing from project root directory
 
-# Generate shared keys
+# Generate shared keys (usually from key agreement protocol, ex. X3HD)
 sk = os.urandom(32)
 hk1 = os.urandom(32)
 hk2 = os.urandom(32)
@@ -80,11 +80,11 @@ print(pt)
 - ~~Header encryption~~
 - ~~Delete skipped msg keys after time or ratchet events (ex. successful decrypt)~~
 - ~~Deferred ratchet keygen until send time~~
-- Re-add non-header encryption variant
+- ~~Re-add non-header encryption variant~~
 
 Cleanup:
 
-- ~~Fix main FIXMEs~~
+- Fix main FIXMEs
 - ~~Add documentation~~
 - ~~Setup session/users/state/messages + cleanup interface~~
 - Reduce transmitted message size (ex. generate AES-GCM IV from HDKF, truncate AES-CCM HMAC tag)
