@@ -11,6 +11,8 @@ Parties send Diffie-Hellman public keys with each message, which when changed ca
 
 - Cryptographic primitives used:  
   
+  TODO: update
+
   - `GENERATE_DH()`: generates new Diffie-Hellman key pair using Curve448.  
   
   - `KDF_RK_HE(rk, dh_out)`: implemented using `HKDF` with `SHA256` per [spec](https://signal.org/docs/specifications/doubleratchet/#implementation-considerations).
@@ -24,11 +26,13 @@ Parties send Diffie-Hellman public keys with each message, which when changed ca
 
   - Encryption of headers using header key MUST use a new IV each time as the header keys remain the same for multiple messages (i.e. are not part of the KDF chains), updating only after a DH-ratchet step. 
 
+TODO: update
+
 - Maximum 1000 messages can be skipped in a single chain. If 1000 skipped keys are already stored, new ones will delete the oldest. Furthermore, skipped keys are only stored for `(new_msg_no - oldest_msg_no + 5)` successful message decrypt events.
 
 - Currently only header encrypted version is supported. Per Signal [spec](https://signal.org/docs/specifications/doubleratchet/#double-ratchet-with-header-encryption), session association for messages with encrypted headers is tricky, see [Pond](https://github.com/agl/pond) protocol (particularly [here](https://github.com/agl/pond/blob/675020c2d997636c8cd4c24c83e7bcd872dcd3aa/client/network.go)).
 
-- Shared secrets for root key (`rk`) and initial header encryption keys (`hk_s` and `next_hk_r` for sender) are agreed upon before starting Double Ratchet exchange. Furthermore, any metadata from this key agreement protocol can be used as AAD in Doulbe Ratchet messages. 
+- Shared secrets for root key (`rk`) and initial header encryption keys (`hk_s` and `next_hk_r` for sender) are agreed upon before starting Double Ratchet exchange. Furthermore, any metadata from this key agreement protocol can be used as AAD in Double Ratchet messages. 
 
 ## Dependencies
 
@@ -82,14 +86,14 @@ print(pt)
 - ~~Delete skipped msg keys after time or ratchet events (ex. successful decrypt)~~
 - ~~Deferred ratchet keygen until send time~~
 - ~~Re-add non-header encryption variant~~
+- Migrate to interface approach
 
 Cleanup:
 
 - Fix main FIXMEs
 - ~~Add documentation~~
-- ~~Setup session/users/state/messages + cleanup interface~~
+- ~~Setup session/users/state/messages~~
 - Reduce transmitted message size (ex. generate AES-GCM IV from HDKF, truncate AES-CCM HMAC tag)
-- Set maximum send/receive chain length before require DH-ratchet step
 
 Where to go next:
 
