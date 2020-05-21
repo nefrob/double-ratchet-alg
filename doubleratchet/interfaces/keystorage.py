@@ -1,7 +1,10 @@
-from abc import ABC, abstractmethod
+from __future__ import absolute_import
 
+from abc import abstractmethod
 
-class MsgKeyStorageIface(ABC):
+from .serializable import SerializableIface
+
+class MsgKeyStorageIface(SerializableIface):
   """TODO:"""
 
   @abstractmethod
@@ -20,17 +23,16 @@ class MsgKeyStorageIface(ABC):
     pass
 
   @abstractmethod
-  def size(self):
+  def count(self):
     """TODO:"""
     pass
 
   @abstractmethod
-  def serialize(self):
+  def items(self):
     """TODO:"""
     pass
-  
-  @classmethod
+
   @abstractmethod
-  def deserialize(cls):
+  def event_update(self):
     """TODO:"""
     pass

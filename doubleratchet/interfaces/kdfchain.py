@@ -1,7 +1,11 @@
-from abc import ABC, abstractmethod
+from __future__ import absolute_import
+
+from abc import abstractmethod
+
+from .serializable import SerializableIface
 
 
-class KDFChainIface(ABC):
+class KDFChainIface(SerializableIface):
   """TODO:"""
 
   @abstractmethod
@@ -16,6 +20,23 @@ class KDFChainIface(ABC):
 
   @classmethod
   @abstractmethod
-  def deserialize(cls):
+  def deserialize(cls, serialized_chain):
     """TODO:"""
     pass
+
+
+class SymmetricChainIface(KDFChainIface):
+  """TODO:"""
+
+  @property
+  @abstractmethod
+  def msg_no(self):
+    """TODO:"""
+    pass
+
+  @msg_no.setter
+  @abstractmethod
+  def msg_no(self, val):
+    """TODO:"""
+    pass
+

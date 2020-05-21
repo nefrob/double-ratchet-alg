@@ -6,4 +6,6 @@ Author: Robert Neff
 
 from __future__ import absolute_import
 
-from . import aead, dhkeypair, kdfchain
+from . import aead
+from . import dhkey
+from . import kdfchain

@@ -7,6 +7,7 @@ Author: Robert Neff
 from __future__ import absolute_import
 
 from . import aead
-from . import dhkeypair
+from . import dhkey
 from . import keystorage
 from . import kdfchain
+from . import serializable

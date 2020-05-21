@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from abc import ABC, abstractmethod
 
 
@@ -6,12 +8,12 @@ class AEADIFace(ABC):
 
   @staticmethod
   @abstractmethod
-  def encrypt(pt, associated_data = None):
+  def encrypt(key, pt, associated_data = None):
     """TODO:"""
     pass
 
   @staticmethod
   @abstractmethod
-  def decrypt(ct, associated_data = None):
+  def decrypt(key, ct, associated_data = None):
     """TODO:"""
     pass
