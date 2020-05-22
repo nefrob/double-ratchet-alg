@@ -41,7 +41,7 @@ class AES256CBCHMAC(AEADIFace):
     aes_cbc = AES256CBCHMAC._aes_cipher(aes_key, iv).encryptor()
     ct = aes_cbc.update(padded_pt) + aes_cbc.finalize()
 
-    tag = hmac(hmac_key, associated_data + ct, SHA256, default_backend())
+    tag = hmac(hmac_key, associated_data + ct, SHA256(), default_backend())
 
     return ct + tag
 
@@ -60,16 +60,16 @@ class AES256CBCHMAC(AEADIFace):
 
     try:
       hmac_verify(hmac_key,
-        associated_data + ct[:-SHA256.digest_size],
-        SHA256,
+        associated_data + ct[:-SHA256().digest_size],
+        SHA256(),
         default_backend(),
-        ct[-SHA256.digest_size:] # tag
+        ct[-SHA256().digest_size:] # tag
       )
     except InvalidSignature:
       raise AuthenticationFailed("Invalid ciphertext")
 
     aes_cbc = AES256CBCHMAC._aes_cipher(aes_key, iv).decryptor()
-    pt_padded = aes_cbc.update(ct[:-SHA256.digest_size]) + aes_cbc.finalize()
+    pt_padded = aes_cbc.update(ct[:-SHA256().digest_size]) + aes_cbc.finalize()
     
     unpadder = padding.PKCS7(AES256CBCHMAC.IV_LEN * 8).unpadder()
     pt = unpadder.update(pt_padded) + unpadder.finalize()
@@ -80,9 +80,10 @@ class AES256CBCHMAC(AEADIFace):
   def _gen_keys(key):
     hkdf_out = hkdf(
       key, 
-      AES256CBCHMAC.HKDF_LEN, 
-      "cbchmac_keys", 
-      SHA256, 
+      AES256CBCHMAC.HKDF_LEN,
+      bytes(SHA256().digest_size),
+      b"cbchmac_keys", 
+      SHA256(), 
       default_backend()
     )
     

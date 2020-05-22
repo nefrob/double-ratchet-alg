@@ -8,6 +8,12 @@ from .serializable import SerializableIface
 class KDFChainIface(SerializableIface):
   """TODO:"""
 
+  @property
+  @abstractmethod
+  def ck(self):
+    """TODO:"""
+    pass
+
   @ck.setter
   @abstractmethod
   def ck(self, val):

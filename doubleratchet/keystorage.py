@@ -15,7 +15,12 @@ class MsgKeyStorage(MsgKeyStorageIface):
     else:
       self._skipped_mks = OrderedDict()
 
+  def front(self):
+    return next(iter(self._skipped_mks))
+
   def lookup(self, key):
+    if key not in self._skipped_mks:
+      return None
     return self._skipped_mks[key]
 
   def put(self, key, value):

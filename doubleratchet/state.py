@@ -57,9 +57,17 @@ class State:
   def dh_pair(self):
     return self._dh_pair
   
+  @dh_pair.setter
+  def dh_pair(self, val):
+    self._dh_pair = val
+  
   @property
   def dh_pk_r(self):
     return self._dh_pk_r
+  
+  @dh_pk_r.setter
+  def dh_pk_r(self, val):
+    self._dh_pk_r = val
 
   @property
   def root(self):
@@ -86,7 +94,7 @@ class State:
     return self._delayed_send_ratchet
 
   @delayed_send_ratchet.setter
-  def delayed_send_ratchet(self):
+  def delayed_send_ratchet(self, val):
     self._delayed_send_ratchet
 
   @property

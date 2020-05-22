@@ -5,27 +5,31 @@ from cryptography.hazmat.primitives.hmac import HMAC
 
 
 # TODO:
-def hkdf(key, length, info, hash_alg, backend):
+def hkdf(key, length, salt, info, hash_alg, backend):
   return HKDF(
     algorithm=hash_alg,
     length=length,
-    salt=bytes(hash_alg.digest_size),
+    salt=salt,
     info=info,
     backend=backend
   ).derive(key)
 
 # TODO:
 def hmac(key, data, hash_alg, backend):
-  return HMAC(
+  h = HMAC(
     key,
     hash_alg,
     backend=backend
-  ).update(data).finalize()
+  )
+  h.update(data)
+  return h.finalize()
 
 # TODO:
 def hmac_verify(key, data, hash_alg, backend, sig = None):
-  return HMAC(
+  h = HMAC(
     key,
     hash_alg,
     backend=backend
-  ).update(data).verify(sig)
+  )
+  h.update(data)
+  return h.verify(sig)

@@ -32,8 +32,8 @@ class SymmetricChain(SymmetricChainIface):
 
     self._msg_no += 1
 
-    mk = hmac(self._ck, b"mk_ratchet", SHA256, default_backend())
-    self._ck = hmac(self._ck, b"ck_ratchet", SHA256, default_backend())
+    mk = hmac(self._ck, b"mk_ratchet", SHA256(), default_backend())
+    self._ck = hmac(self._ck, b"ck_ratchet", SHA256(), default_backend())
     
     return mk
 
@@ -47,6 +47,10 @@ class SymmetricChain(SymmetricChainIface):
   def deserialize(cls, serialized_chain):
     return cls(serialized_chain["ck"], serialized_chain["msg_no"])
   
+  @property
+  def ck(self):
+    return self._ck
+
   @ck.setter
   def ck(self, val):
     self._ck = val
@@ -74,7 +78,7 @@ class RootChain(RootChainIface):
     else:
       self._ck = None
 
-  def ratchet(self, dh_out, outputs = RootChain.DEFAULT_OUTPUTS):
+  def ratchet(self, dh_out, outputs = DEFAULT_OUTPUTS):
     if not isinstance(dh_out, bytes):
       raise TypeError("dh_out must be of type: bytes")
     if not isinstance(outputs, int):
@@ -85,10 +89,11 @@ class RootChain(RootChainIface):
       raise ValueError("ck is not initialized")
 
     hkdf_out = hkdf(
-      self._ck, 
+      dh_out, 
       RootChain.KEY_LEN * (outputs + 1),
+      self._ck,
       b"rk_ratchet", 
-      SHA256, 
+      SHA256(), 
       default_backend()
     )
 
@@ -102,13 +107,16 @@ class RootChain(RootChainIface):
 
   def serialize(self):
     return {
-      "ck" : self._ck,
-      "outputs" : self._outputs
+      "ck" : self._ck
     }
 
   @classmethod
   def deserialize(cls, serialized_chain):
-    return cls(serialized_chain["ck"], serialized_chain["outputs"])
+    return cls(serialized_chain["ck"])
+
+  @property
+  def ck(self):
+    return self._ck
 
   @ck.setter
   def ck(self, val):

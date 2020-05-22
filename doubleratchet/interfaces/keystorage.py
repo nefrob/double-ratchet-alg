@@ -8,6 +8,11 @@ class MsgKeyStorageIface(SerializableIface):
   """TODO:"""
 
   @abstractmethod
+  def front(self):
+    """TODO:"""
+    pass
+
+  @abstractmethod
   def lookup(self, key):
     """TODO:"""
     pass

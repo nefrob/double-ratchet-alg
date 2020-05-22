@@ -14,6 +14,6 @@ class RatchetIface(ABC):
 
   @staticmethod
   @abstractmethod
-  def decrypt_message(state, msg, associated_data, aead):
+  def decrypt_message(state, msg, associated_data, aead, keypair):
     """TODO:"""
     pass
