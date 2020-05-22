@@ -4,7 +4,7 @@ from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.backends import default_backend
 
-from ..interfaces.kdfchain import KDFChainIface, SymmetricChainIface
+from ..interfaces.kdfchain import RootChainIface, SymmetricChainIface
 from .utils import hkdf, hmac
 
 
@@ -27,8 +27,14 @@ class SymmetricChain(SymmetricChainIface):
       self._msg_no = 0
 
   def ratchet(self):
+    if self._ck == None:
+      raise ValueError("ck is not initialized")
+
+    self._msg_no += 1
+
     mk = hmac(self._ck, b"mk_ratchet", SHA256, default_backend())
     self._ck = hmac(self._ck, b"ck_ratchet", SHA256, default_backend())
+    
     return mk
 
   def serialize(self):
@@ -41,6 +47,10 @@ class SymmetricChain(SymmetricChainIface):
   def deserialize(cls, serialized_chain):
     return cls(serialized_chain["ck"], serialized_chain["msg_no"])
   
+  @ck.setter
+  def ck(self, val):
+    self._ck = val
+
   @property
   def msg_no(self):
     return self._msg_no
@@ -50,10 +60,11 @@ class SymmetricChain(SymmetricChainIface):
     self._msg_no = val
 
 
-class RootChain(KDFChainIface):
+class RootChain(RootChainIface):
   KEY_LEN = 32
+  DEFAULT_OUTPUTS = 1
 
-  def __init__(self, ck = None, outputs = 2):
+  def __init__(self, ck = None):
     if ck:
       if not isinstance(ck, bytes):
         raise TypeError("ck must be of type: bytes")
@@ -63,25 +74,28 @@ class RootChain(KDFChainIface):
     else:
       self._ck = None
 
+  def ratchet(self, dh_out, outputs = RootChain.DEFAULT_OUTPUTS):
+    if not isinstance(dh_out, bytes):
+      raise TypeError("dh_out must be of type: bytes")
     if not isinstance(outputs, int):
       raise TypeError("outputs must be of type: int")
     if outputs < 0:
       raise ValueError("outputs must be positive")
-    self._outputs = outputs
+    if self._ck == None:
+      raise ValueError("ck is not initialized")
 
-  def ratchet(self):
     hkdf_out = hkdf(
       self._ck, 
-      RootChain.KEY_LEN * (self._outputs + 1),
+      RootChain.KEY_LEN * (outputs + 1),
       b"rk_ratchet", 
       SHA256, 
       default_backend()
     )
 
-    self._rk = hkdf_out[:RootChain.KEY_LEN]
+    self._rk = hkdf_out[-RootChain.KEY_LEN:]
 
     keys = []
-    for i in range(1, self._outputs):
+    for i in range(0, outputs):
       keys.append(hkdf_out[i * RootChain.KEY_LEN:(i + 1) * RootChain.KEY_LEN])
 
     return keys
@@ -95,3 +109,7 @@ class RootChain(KDFChainIface):
   @classmethod
   def deserialize(cls, serialized_chain):
     return cls(serialized_chain["ck"], serialized_chain["outputs"])
+
+  @ck.setter
+  def ck(self, val):
+    self._ck=  val

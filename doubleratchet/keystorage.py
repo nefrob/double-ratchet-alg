@@ -30,9 +30,8 @@ class MsgKeyStorage(MsgKeyStorageIface):
   def items(self):
     return self._skipped_mks.items()
 
-  def event_update(self):
-    pass
-    # TODO:
+  def notify_event(self):
+    pass # TODO: handle decrypt event delete keys
 
   def serialize(self):
     return dict(self._skipped_mks)

@@ -10,4 +10,5 @@ from . import aead
 from . import dhkey
 from . import keystorage
 from . import kdfchain
+from . import ratchet
 from . import serializable

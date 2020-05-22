@@ -33,6 +33,6 @@ class MsgKeyStorageIface(SerializableIface):
     pass
 
   @abstractmethod
-  def event_update(self):
+  def notify_event(self):
     """TODO:"""
     pass

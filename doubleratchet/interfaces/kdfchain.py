@@ -8,25 +8,19 @@ from .serializable import SerializableIface
 class KDFChainIface(SerializableIface):
   """TODO:"""
 
+  @ck.setter
+  @abstractmethod
+  def ck(self, val):
+    """TODO:"""
+    pass
+
+class SymmetricChainIface(KDFChainIface):
+  """TODO:"""
+
   @abstractmethod
   def ratchet(self):
     """TODO:"""
     pass
-
-  @abstractmethod
-  def serialize(self):
-    """TODO:"""
-    pass
-
-  @classmethod
-  @abstractmethod
-  def deserialize(cls, serialized_chain):
-    """TODO:"""
-    pass
-
-
-class SymmetricChainIface(KDFChainIface):
-  """TODO:"""
 
   @property
   @abstractmethod
@@ -40,3 +34,10 @@ class SymmetricChainIface(KDFChainIface):
     """TODO:"""
     pass
 
+class RootChainIface(KDFChainIface):
+  """TODO:"""
+
+  @abstractmethod
+  def ratchet(self, dh_out):
+    """TODO:"""
+    pass

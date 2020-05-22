@@ -14,9 +14,8 @@ class DHKeyPairIface(SerializableIface):
     """TODO:"""
     pass
 
-  @staticmethod
   @abstractmethod
-  def dh_out(priv_a, pub_b):
+  def dh_out(self, dh_pk):
     """TODO:"""
     pass
 
@@ -38,6 +37,11 @@ class DHPublicKeyIface(SerializableIface):
 
   @abstractmethod
   def pk_bytes(self):
+    """TODO:"""
+    pass
+
+  @abstractmethod
+  def is_equal_to(self, dh_pk):
     """TODO:"""
     pass
 

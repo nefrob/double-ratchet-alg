@@ -3,16 +3,17 @@ from __future__ import absolute_import
 from abc import ABC, abstractmethod
 
 
-class SerializableIface(ABC):
+class RatchetIface(ABC):
   """TODO:"""
 
+  @staticmethod
   @abstractmethod
-  def serialize(self):
+  def encrypt_message(state, pt, associated_data, aead):
     """TODO:"""
     pass
 
-  @classmethod
+  @staticmethod
   @abstractmethod
-  def deserialize(cls, serialized_obj):
+  def decrypt_message(state, msg, associated_data, aead):
     """TODO:"""
     pass
