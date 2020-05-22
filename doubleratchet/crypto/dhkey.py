@@ -21,14 +21,11 @@ class DHKeyPair(DHKeyPairIface):
   def generate_dh(cls):
     return cls(X448PrivateKey.generate())
 
-  @staticmethod
-  def dh_out(priv_a, pub_b):
-    if not isinstance(priv_a, X448PrivateKey):
-      raise TypeError("priv_a must be of type: X448PrivateKey")
-    if not isinstance(pub_b, X448PublicKey):
-      raise TypeError("pub_b must be of type: X448PublicKey")
+  def dh_out(self, dh_pk):
+    if not isinstance(dh_pk, X448PublicKey):
+      raise TypeError("dh_pk must be of type: X448PublicKey")
   
-    return priv_a.exchange(pub_b)
+    return self.private_key.exchange(dh_pk)
 
   def serialize(self):
     return {
@@ -70,8 +67,19 @@ class DHPublicKey(DHPublicKeyIface):
   def pk_bytes(self):
     return pk_bytes(self._public_key)
 
+  def is_equal_to(self, dh_pk):
+    if not isinstance(dh_pk, X448PublicKey):
+      raise TypeError("dh_pk must be of type: X448PublicKey")
+
+    return self.pk_bytes() == dh_pk.pk_bytes()
+
   @classmethod
   def from_bytes(cls, pk_bytes):
+    if not isinstance(pk_bytes, bytes):
+      raise TypeError("pk_bytes must be of type: bytes")
+    if not len(pk_bytes) == DHPublicKey.KEY_LEN:
+      raise ValueError("pk_bytes must be 56 bytes")
+
     return cls(X448PublicKey.from_public_bytes(pk_bytes))
 
   @property

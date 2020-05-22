@@ -11,5 +11,6 @@ from . import crypto
 
 from .keystorage import MsgKeyStorage
 from .message import Header, Message, MessageHE
+from .ratchet import Ratchet
 from state import State
 # from session import DRSession, DRSessionHE
