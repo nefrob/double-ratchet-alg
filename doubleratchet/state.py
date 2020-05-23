@@ -1,6 +1,12 @@
+from __future__ import absolute_import
+
+import pickle
+
+from .interfaces.serializable import SerializableIface
+
 
 # TODO:
-class State:
+class State(SerializableIface):
   def __init__(self, keypair, public_key, keystorage, 
       root_chain, symmetric_chain):
     self._dh_pair = None
@@ -22,6 +28,7 @@ class State:
     self._skipped_count = 0
 
     self._keypair = keypair
+    self._public_key = public_key
     self._keystorage = keystorage
     self._root_chain = root_chain
     self._symmetric_chain = symmetric_chain
@@ -111,3 +118,52 @@ class State:
   @skipped_count.setter
   def skipped_count(self, val):
     self._skipped_count = val
+
+  def serialize(self):
+    return {
+      "dh_pair" : self._dh_pair.serialize(),
+      "dh_pk_r": self._dh_pk_r.serialize(),
+      "root": self._root.serialize(),
+      "send": self._send.serialize(),
+      "receive": self._receive.serialize(),
+      "prev_send_len": self._prev_send_len,
+      "hk_s": self._hk_s,
+      "hk_r": self._hk_r,
+      "next_hk_s": self._next_hk_s,
+      "next_hk_r": self._next_hk_r,
+      "delayed_send_ratchet": self._delayed_send_ratchet,
+      "skipped_mks": self._skipped_mks.serialize(),
+      "skipped_count": self._skipped_count,
+      "keypair_class": pickle.dumps(self._keypair),
+      "pk_class": pickle.dumps(self._public_key),
+      "keystorage_class": pickle.dumps(self._keystorage),
+      "root_chain_class": pickle.dumps(self._root_chain),
+      "symmetric_chain_class": pickle.dumps(self._symmetric_chain)
+    }
+  
+  @classmethod
+  def deserialize(cls, serialized_dict):
+    keypair_class = pickle.loads(serialized_dict["keypair_class"])
+    pk_class = pickle.loads(serialized_dict["pk_class"])
+    keystorage_class = pickle.loads(serialized_dict["keystorage_class"])
+    root_chain_class = pickle.loads(serialized_dict["root_chain_class"])
+    symmetric_chain_class = pickle.loads(serialized_dict["symmetric_chain_class"])
+
+    state = cls(keypair_class, pk_class, keystorage_class, root_chain_class,
+      symmetric_chain_class)
+
+    state._dh_pair = keypair_class.deserialize(serialized_dict["dh_pair"])
+    state._dh_pk_r = pk_class.deserialize(serialized_dict["dh_pk_r"])
+    state._root = root_chain_class.deserialize(serialized_dict["root"])
+    state._send = symmetric_chain_class.deserialize(serialized_dict["send"])
+    state._receive = symmetric_chain_class.deserialize(serialized_dict["receive"])
+    state._prev_send_len = serialized_dict["prev_send_len"]
+    state._hk_s = serialized_dict["hk_s"]
+    state._hk_r = serialized_dict["hk_r"]
+    state._next_hk_s = serialized_dict["next_hk_s"]
+    state._next_hk_r = serialized_dict["next_hk_r"]
+    state._delayed_send_ratchet = serialized_dict["delayed_send_ratchet"]
+    state._skipped_mks = keystorage_class.deserialize(serialized_dict["skipped_mks"])
+    state._skipped_count = serialized_dict["skipped_count"]
+
+    return state

@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import pickle
+
 from .interfaces.aead import AEADIFace
 from .interfaces.dhkey import DHKeyPairIface, DHPublicKeyIface
 from .interfaces.kdfchain import RootChainIface, SymmetricChainIface
@@ -52,7 +54,7 @@ class DRSession(SerializableIface):
     self._ratchet = ratchet
 
     if state:
-      pass # TODO:
+      self._state = state
     else:
       self._state = \
         State(keypair, public_key, keystorage, root_chain, symmetric_chain)
@@ -133,17 +135,19 @@ class DRSession(SerializableIface):
     """TODO:"""
     return self._keypair.generate_dh()
 
-
   def serialize(self) -> dict:
-    """TODO:"""
     return {
-      "TODO:" : None
+      "state" : self._state.serialize(),
+      "aead": pickle.dumps(self._aead),
+      "keypair": pickle.dumps(self._keypair),
+      "ratchet": pickle.dumps(self._ratchet)
     }
-  
+
   @classmethod
   def deserialize(cls, serialized_dict: dict):
-    """TODO:"""
-
-    state = None
-
-    return cls(state=state)
+    return cls(
+      state=State.deserialize(serialized_dict["state"]),
+      aead=pickle.loads(serialized_dict["aead"]),
+      keypair=pickle.loads(serialized_dict["keypair"]),
+      ratchet=pickle.loads(serialized_dict["ratchet"])
+    )

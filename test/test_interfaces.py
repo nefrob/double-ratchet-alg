@@ -11,6 +11,7 @@ import unittest
 from doubleratchet.crypto.utils import rand_str
 from doubleratchet.session import DRSession
 from doubleratchet.crypto.dhkey import DHKeyPair
+from doubleratchet.crypto.aead import AES256GCM
 from doubleratchet.ratchet import dh_ratchet
 
 # Default consts
@@ -151,15 +152,33 @@ class RatchetTests(unittest.TestCase):
     # TODO:
     pass
 
-  # Test session serialize
-  def test_serialize(self):
-    # TODO:
-    pass
+  # Test session works after serializing and deserializing
+  def test_serialization(self):
+    a, b = setup()
+    send_recv(self, a, b)
+    send_recv(self, b, a)
+    send_recv(self, a, b)
+    send_recv(self, a, b)
+    send_recv(self, b, a)
+    send_recv(self, b, a)
 
-  # Test session deserialize
-  def test_deserialize(self):
-    # TODO:
-    pass
+    serial_a = a.serialize()
+    a_deserial = a.deserialize(serial_a)
+
+    send_recv(self, a_deserial, b)
+    send_recv(self, b, a_deserial)
+
+  # Test passing different aead class works
+  def test_aesgcm(self):
+    sk = os.urandom(KEY_LEN)
+    receiver = DRSession(aead=AES256GCM)
+    receiver_dh_keys = receiver.generate_dh_keys()
+    receiver.setup_receiver(sk, receiver_dh_keys)
+
+    sender = DRSession(aead=AES256GCM)
+    sender.setup_sender(sk, receiver_dh_keys.public_key)
+
+    send_recv(self, sender, receiver)
 
 
 if __name__ == '__main__':
