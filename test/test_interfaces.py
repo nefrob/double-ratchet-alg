@@ -14,9 +14,10 @@ from doubleratchet.crypto.dhkey import DHKeyPair
 from doubleratchet.crypto.aead import AES256GCM
 from doubleratchet.ratchet import dh_ratchet
 
-# Default consts
+# Default consts lifted from classes
 KEY_LEN = 32
 MAX_SKIP = 1000
+EVENT_THRESH = 5
 
 
 # Simple sender/receiver setup
@@ -130,27 +131,32 @@ class RatchetTests(unittest.TestCase):
     a, b = setup()
   
     _, data, msg = send_encrypt(a)
-    self.assertRaises(Exception, recv_decrypt, b, msg, data + b"tamper")
+    self.assertRaises(Exception, recv_decrypt, b, data + b"tamper", msg)
 
-  # Test old skipped mks deleted when skipped dict full
-  def test_skipped_mks_del(self):
+  # Test too many skipped mks in chain
+  def test_skipped_mks_too_many(self):
     a, b = setup()
     
-    _, data1, msg1 = send_encrypt(a)
-    _, data2, msg2 = send_encrypt(a)
-    for i in range(MAX_SKIP - 2):
+    for i in range(MAX_SKIP):
       send_encrypt(a)
     
     send_recv(self, a, b) # msg 1001, gens 1000 skipped keys
     send_encrypt(a)
 
-    # msg 1003, gens new skipped key and so deletes first skipped
+    # msg 1003, gens new skipped key 
     self.assertRaises(Exception, send_recv, self, a, b)
 
   # Test event deletion policy
   def test_skipped_mks_event_del(self):
-    # TODO:
-    pass
+    a, b = setup()
+
+    _, data, msg = send_encrypt(a)
+    
+    # Trigger skipped key generated, decrypt events
+    for i in range(EVENT_THRESH + 1):
+      send_recv(self, a, b)
+
+    self.assertRaises(Exception, recv_decrypt, b, data, msg)
 
   # Test session works after serializing and deserializing
   def test_serialization(self):

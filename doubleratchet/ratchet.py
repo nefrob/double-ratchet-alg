@@ -91,10 +91,10 @@ def try_skipped_mks(state, header, ct, associated_data, aead):
 def skip_over_mks(state, end_msg_no, map_key):
   new_skip = end_msg_no - state.receive.msg_no
   if new_skip + state.skipped_count > Ratchet.MAX_SKIP:
-    # or new_skip + state.skipped_mks.count() > Ratchet.MAX_STORE:
-  # if state.receive.msg_no + Ratchet.MAX_SKIP < end_msg_no:
     raise MaxSkippedMksExceeded("Too many messages skipped in"
       "current chain")
+  if new_skip + state.skipped_mks.count() > Ratchet.MAX_STORE:
+    raise MaxSkippedMksExceeded("Too many messages stored")
   elif state.receive.ck != None:
     while state.receive.msg_no < end_msg_no:
       mk = state.receive.ratchet()
