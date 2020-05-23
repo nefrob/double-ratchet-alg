@@ -30,8 +30,6 @@ class SymmetricChain(SymmetricChainIface):
     if self._ck == None:
       raise ValueError("ck is not initialized")
 
-    self._msg_no += 1
-
     mk = hmac(self._ck, b"mk_ratchet", SHA256(), default_backend())
     self._ck = hmac(self._ck, b"ck_ratchet", SHA256(), default_backend())
     

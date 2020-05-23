@@ -1,5 +1,8 @@
 from __future__ import absolute_import
 
+from secrets import choice
+import string
+
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.hmac import HMAC
 
@@ -33,3 +36,10 @@ def hmac_verify(key, data, hash_alg, backend, sig = None):
   )
   h.update(data)
   return h.verify(sig)
+
+# Return random alpha-numeric string of specified length
+def rand_str(n):
+  assert(isinstance(n, int))
+
+  return ''.join(choice(
+    string.ascii_uppercase + string.digits) for i in range(n))

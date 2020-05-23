@@ -117,7 +117,7 @@ class DRSession(SerializableIface):
 
     Raises:
       Error: on message decryption failure the message is discarded
-      and state reverteds.
+      and state reverts.
     """
 
     if not isinstance(msg, Message):

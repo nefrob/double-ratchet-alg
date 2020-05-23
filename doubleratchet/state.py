@@ -19,6 +19,7 @@ class State:
     self._delayed_send_ratchet = False
 
     self._skipped_mks = None
+    self._skipped_count = 0
 
     self._keypair = keypair
     self._keystorage = keystorage
@@ -38,6 +39,7 @@ class State:
     self._delayed_send_ratchet = True
 
     self._skipped_mks = self._keystorage()
+    self._skipped_count = 0
 
   def init_receiver(self, sk, dh_pair):
     self._dh_pair = dh_pair
@@ -52,6 +54,7 @@ class State:
     self._delayed_send_ratchet = False
 
     self._skipped_mks = self._keystorage()
+    self._skipped_count = 0
 
   @property
   def dh_pair(self):
@@ -95,8 +98,16 @@ class State:
 
   @delayed_send_ratchet.setter
   def delayed_send_ratchet(self, val):
-    self._delayed_send_ratchet
+    self._delayed_send_ratchet = val
 
   @property
   def skipped_mks(self):
     return self._skipped_mks
+
+  @property
+  def skipped_count(self):
+    return self._skipped_count
+
+  @skipped_count.setter
+  def skipped_count(self, val):
+    self._skipped_count = val

@@ -42,7 +42,6 @@ class AES256CBCHMAC(AEADIFace):
     ct = aes_cbc.update(padded_pt) + aes_cbc.finalize()
 
     tag = hmac(hmac_key, associated_data + ct, SHA256(), default_backend())
-
     return ct + tag
 
   @staticmethod
