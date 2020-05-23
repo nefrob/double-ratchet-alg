@@ -9,7 +9,7 @@ import random as rand
 import unittest
 
 from doubleratchet.crypto.utils import rand_str
-from doubleratchet.session import DRSession
+from doubleratchet.session import DRSession, DRSessionHE
 from doubleratchet.crypto.dhkey import DHKeyPair
 from doubleratchet.crypto.aead import AES256GCM
 from doubleratchet.ratchet import dh_ratchet
@@ -21,18 +21,30 @@ EVENT_THRESH = 5
 
 
 # Simple sender/receiver setup
-def setup(): 
+def setup(encrypted_header=True): 
   # Generate shared secret
   sk = os.urandom(KEY_LEN)
+  hk1 = os.urandom(KEY_LEN)
+  hk2 = os.urandom(KEY_LEN)
 
   # Init sessions
-  receiver = DRSession()
-  receiver_dh_keys = receiver.generate_dh_keys()
-  receiver.setup_receiver(sk, receiver_dh_keys)
+  sender = None
+  receiver = None
+  if encrypted_header:
+    receiver = DRSessionHE()
+    receiver_dh_keys = receiver.generate_dh_keys()
+    receiver.setup_receiver(sk, receiver_dh_keys, hk2, hk1)
 
-  sender = DRSession()
-  sender.setup_sender(sk, receiver_dh_keys.public_key)
+    sender = DRSessionHE()
+    sender.setup_sender(sk, receiver_dh_keys.public_key, hk1, hk2)
+  else:
+    receiver = DRSession()
+    receiver_dh_keys = receiver.generate_dh_keys()
+    receiver.setup_receiver(sk, receiver_dh_keys)
 
+    sender = DRSession()
+    sender.setup_sender(sk, receiver_dh_keys.public_key)
+    
   return sender, receiver
 
 # Encrypt message from sender

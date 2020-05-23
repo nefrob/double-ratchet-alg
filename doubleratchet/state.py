@@ -48,6 +48,26 @@ class State(SerializableIface):
     self._skipped_mks = self._keystorage()
     self._skipped_count = 0
 
+  def init_sender_he(self, sk, dh_pk_r, hk_s, next_hk_r):
+    self._dh_pair = self._keypair.generate_dh()
+    self._dh_pk_r = dh_pk_r
+
+    self._root = self._root_chain()
+    self._root.ck = sk
+    self._send = self._symmetric_chain()
+    self._receive = self._symmetric_chain()
+    self._prev_send_len = 0
+
+    self._hk_s = hk_s
+    self._hk_r = None
+    self._next_hk_s = None
+    self._next_hk_r = next_hk_r
+
+    self._delayed_send_ratchet = True
+
+    self._skipped_mks = self._keystorage()
+    self._skipped_count = 0
+
   def init_receiver(self, sk, dh_pair):
     self._dh_pair = dh_pair
     self._dh_pk_r = None
@@ -57,6 +77,26 @@ class State(SerializableIface):
     self._send = self._symmetric_chain()
     self._receive = self._symmetric_chain()
     self._prev_send_len = 0
+
+    self._delayed_send_ratchet = False
+
+    self._skipped_mks = self._keystorage()
+    self._skipped_count = 0
+
+  def init_receiver_he(self, sk, dh_pair, next_hk_s, next_hk_r):
+    self._dh_pair = dh_pair
+    self._dh_pk_r = None
+
+    self._root = self._root_chain()
+    self._root.ck = sk
+    self._send = self._symmetric_chain()
+    self._receive = self._symmetric_chain()
+    self._prev_send_len = 0
+
+    self._hk_s = None
+    self._hk_r = None
+    self._next_hk_s = next_hk_s
+    self._next_hk_r = next_hk_r
 
     self._delayed_send_ratchet = False
 
@@ -98,6 +138,38 @@ class State(SerializableIface):
   @prev_send_len.setter
   def prev_send_len(self, val):
     self._prev_send_len = val
+
+  @property
+  def hk_s(self):
+    return self._hk_s
+  
+  @hk_s.setter
+  def hk_s(self, val):
+    self._hk_s = val
+
+  @property
+  def hk_r(self):
+    return self._hk_r
+  
+  @hk_r.setter
+  def hk_r(self, val):
+    self._hk_r = val
+
+  @property
+  def next_hk_s(self):
+    return self._next_hk_s
+  
+  @next_hk_s.setter
+  def next_hk_s(self, val):
+    self._next_hk_s = val
+
+  @property
+  def next_hk_r(self):
+    return self._next_hk_r
+  
+  @next_hk_r.setter
+  def next_hk_r(self, val):
+    self._next_hk_r = val
 
   @property
   def delayed_send_ratchet(self):
