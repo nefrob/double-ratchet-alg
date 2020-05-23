@@ -44,8 +44,12 @@ class MsgKeyStorage(MsgKeyStorageIface):
     return self._skipped_mks.items()
 
   def notify_event(self):
+    if len(self._skipped_mks) == 0:
+      self._event_count = 0
+      return
+
     self._event_count = (self._event_count + 1) % MsgKeyStorage.EVENT_THRESH
-    if self._event_count == 0 and len(self._skipped_mks) > 0:
+    if self._event_count == 0:
       del self._skipped_mks[self.front()]
 
   def serialize(self):
