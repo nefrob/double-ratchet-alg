@@ -48,6 +48,13 @@ class MsgKeyStorage(MsgKeyStorageIface):
       self._event_count = 0
       return
 
+    # Naive event-based key deletion
+    # Every EVENT_THRESH events the first key in the dict is deleted.
+    # FIXME:
+    # Ideally each key should live for set amount of events in
+    # dict (ex. using dict for lifetime lookups and doubly linked list
+    # for fast deletion).
+
     self._event_count = (self._event_count + 1) % MsgKeyStorage.EVENT_THRESH
     if self._event_count == 0:
       del self._skipped_mks[self.front()]
@@ -60,6 +67,9 @@ class MsgKeyStorage(MsgKeyStorageIface):
   
   @classmethod
   def deserialize(cls, serialized_dict):
+    if not isinstance(serialized_dict, dict):
+      raise TypeError("serialized_dict must be of type: dict")
+
     return cls(
       OrderedDict(serialized_dict["skipped_mks"]),
       serialized_dict["event_count"]

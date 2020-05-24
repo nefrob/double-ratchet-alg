@@ -5,54 +5,58 @@ from abc import abstractmethod
 from .serializable import SerializableIface
 
 
+# Note: suggested to use Curve25519 or Curve448
 class DHKeyPairIface(SerializableIface):
-  """TODO:"""
+  """Diffie-Hellman Keypair"""
 
   @classmethod
   @abstractmethod
   def generate_dh(cls):
-    """TODO:"""
+    """Generates a new Diffie-Hellman keypair (containing private and 
+    public keys)."""
     pass
 
   @abstractmethod
   def dh_out(self, dh_pk):
-    """TODO:"""
+    """Returns Diffie-Hellman output from private key and provided peer
+    public key."""
     pass
 
   @property
   @abstractmethod
   def private_key(self):
-    """TODO:"""
+    """Returns Diffie-Hellman private key."""
     pass
 
   @property
   @abstractmethod
   def public_key(self):
-    """TODO:"""  
+    """Returns Diffie-Hellman public key."""  
     pass
 
 
 class DHPublicKeyIface(SerializableIface):
-  """TODO:"""
+  """Diffie-Hellman Public Key"""
 
   @abstractmethod
   def pk_bytes(self):
-    """TODO:"""
+    """Returns Diffie-Hellman public key in byte form."""
     pass
 
   @abstractmethod
   def is_equal_to(self, dh_pk):
-    """TODO:"""
+    """Checks if public key is equal to the provided one."""
     pass
 
   @classmethod
   @abstractmethod
   def from_bytes(cls, pk_bytes):
-    """TODO:"""
+    """Returns Diffie-Hellman public key instance from byte form
+    public key."""
     pass
 
   @property
   @abstractmethod
   def public_key(self):
-    """TODO:"""
+    """Returns Diffie-Hellman public key."""
     pass

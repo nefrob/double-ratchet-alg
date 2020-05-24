@@ -8,10 +8,12 @@ from .state import State
 
 
 class MaxSkippedMksExceeded(Exception):
-  """TODO:"""
+  """Too many message keys skipped/stored in single chain."""
   pass
 
+# Default doubel-ratchet encrypt/decrypt
 class Ratchet(RatchetIface):
+  """An implementation of the Ratchet Interface."""
   MAX_SKIP = 1000
   MAX_STORE = 2000
 
@@ -74,8 +76,10 @@ class Ratchet(RatchetIface):
     
     return pt_bytes.decode("utf-8")
 
-
+# Double ratchet encrypt/decrypt (header encryption variant)
 class RatchetHE(RatchetIface):
+  """An implementation of the AEAD Interface."""
+
   MAX_SKIP = 1000
   MAX_STORE = 2000
 
@@ -130,13 +134,6 @@ class RatchetHE(RatchetIface):
         state.hk_r) # save mks from old recv chain
       dh_ratchet_he(state, header.dh_pk, keypair)
 
-    # if not state.dh_pk_r:
-    #   dh_ratchet(state, msg.header.dh_pk, keypair)
-    # elif not state.dh_pk_r.is_equal_to(msg.header.dh_pk): 
-    #   skip_over_mks(state, msg.header.prev_chain_len, 
-    #     state.dh_pk_r.pk_bytes()) # save mks from old recv chain
-    #   dh_ratchet(state, msg.header.dh_pk, keypair)
-    
     skip_over_mks(state, header.msg_no, 
       state.hk_r)  # save mks on new sending chain
 
@@ -149,8 +146,7 @@ class RatchetHE(RatchetIface):
     return pt_bytes.decode("utf-8")
 
 
-
-# TODO:
+# Returns decrypted plaintext if message key was stored, else None
 def try_skipped_mks(state, header, ct, associated_data, aead):
   hdr_pk_bytes = header.dh_pk.pk_bytes()
   mk = state.skipped_mks.lookup((hdr_pk_bytes, header.msg_no))
@@ -162,6 +158,7 @@ def try_skipped_mks(state, header, ct, associated_data, aead):
 
   return None
 
+# Returns decrypted plaintext if header receive key was stored, else None.
 def try_skipped_mks_he(state, header_ct, ct, associated_data, aead):
   for ((hk_r, msg_no), mk) in state.skipped_mks.items():
     try:
@@ -178,6 +175,9 @@ def try_skipped_mks_he(state, header_ct, ct, associated_data, aead):
 
   return None
 
+# Returns decrypted header trying current and next header receive keys.
+# Also returns whether DH-ratchet step is needed, i.e. if next header
+# key is used then returns should DH-ratchet
 def decrypt_header(state, header_ct, aead):
   if state.hk_r != None: # may not have ratcheted yet
     try:
@@ -194,7 +194,10 @@ def decrypt_header(state, header_ct, aead):
 
   raise ValueError("Error: invalid header ciphertext.")
 
-# TODO:
+# Skips over and stores message keys in the current chain 
+# that come before provided end_msg_no. Raises exception
+# if too many messages have been skipped in the current
+# receiving chain.
 def skip_over_mks(state, end_msg_no, map_key):
   new_skip = end_msg_no - state.receive.msg_no
   if new_skip + state.skipped_count > Ratchet.MAX_SKIP:
@@ -212,7 +215,7 @@ def skip_over_mks(state, end_msg_no, map_key):
       state.receive.msg_no += 1
     state.skipped_count += new_skip
 
-# TODO:
+# Diffie-Hellman ratchet step
 def dh_ratchet(state, dh_pk_r, keypair):
   if state.delayed_send_ratchet: 
     state.send.ck = state.root.ratchet(state.dh_pair.dh_out(dh_pk_r))[0]
@@ -226,8 +229,9 @@ def dh_ratchet(state, dh_pk_r, keypair):
   state.receive.msg_no = 0
   state.skipped_count = 0
 
+# Diffie-Hellman ratchet step (header encryption variant)
 def dh_ratchet_he(state, dh_pk_r, keypair):
-  if state.delayed_send_ratchet: 
+  if state.delayed_send_ratchet:
     state.send.ck, state.next_hk_s = \
       state.root.ratchet(state.dh_pair.dh_out(dh_pk_r), 2)
 

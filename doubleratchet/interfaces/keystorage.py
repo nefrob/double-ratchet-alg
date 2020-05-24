@@ -5,39 +5,40 @@ from abc import abstractmethod
 from .serializable import SerializableIface
 
 class MsgKeyStorageIface(SerializableIface):
-  """TODO:"""
+  """Dictionary-like Message Key Storage Interface"""
 
   @abstractmethod
   def front(self):
-    """TODO:"""
+    """Returns first (oldest) stored message key."""
     pass
 
   @abstractmethod
   def lookup(self, key):
-    """TODO:"""
+    """Returns value for provided key, None if key is not present."""
     pass
 
   @abstractmethod
   def put(self, key, value):
-    """TODO:"""
+    """Puts key-value pair in datastructure."""
     pass
 
   @abstractmethod
   def delete(self, key):
-    """TODO:"""
+    """Deletes current key and associated value from datastructure."""
     pass
 
   @abstractmethod
   def count(self):
-    """TODO:"""
+    """Returns number of message keys stored."""
     pass
 
   @abstractmethod
   def items(self):
-    """TODO:"""
+    """Returns list of all (key, value) tuples."""
     pass
 
   @abstractmethod
   def notify_event(self):
-    """TODO:"""
+    """Performs storage updates (ex. key deletion) due to Double Ratchet
+    event (ex. successful decryption)."""
     pass

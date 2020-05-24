@@ -4,16 +4,20 @@ from abc import ABC, abstractmethod
 
 
 class AEADIFace(ABC):
-  """TODO:"""
+  """Authenticated Encryption with Associated Data Interface"""
 
   @staticmethod
   @abstractmethod
   def encrypt(key, pt, associated_data = None):
-    """TODO:"""
+    """Encrypts plaintext, with associated data authentication, using
+      provided key with an AEAD scheme.
+    """
     pass
 
   @staticmethod
   @abstractmethod
   def decrypt(key, ct, associated_data = None):
-    """TODO:"""
+    """Decrypts ciphertext and authenticates associated data using
+      provided key with an AEAD scheme.
+    """
     pass

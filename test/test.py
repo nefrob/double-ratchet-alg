@@ -2,52 +2,68 @@
 Tests for ratchet alg.
 '''
 
+from __future__ import absolute_import
+
 import os
 import random as rand
 import unittest
 
-from src.session import *
-from src.crypto_utils import rand_str
-from src.crypto import DEFAULT_KEY_BYTES
-from src.ratchet import dh_ratchet_he, DELETE_MIN_EVENTS, MAX_SKIP
+from doubleratchet.crypto.utils import rand_str
+from doubleratchet.session import DRSession, DRSessionHE
+from doubleratchet.crypto.dhkey import DHKeyPair
+from doubleratchet.crypto.aead import AES256GCM
+from doubleratchet.ratchet import dh_ratchet
+
+# Default consts lifted from classes
+KEY_LEN = 32
+MAX_SKIP = 1000
+EVENT_THRESH = 5
 
 
-# Simple sender/receiver user setup, HE variant
-def setup_convo(): 
-  # Generate shared keys
-  sk = os.urandom(DEFAULT_KEY_BYTES)
-  hk1 = os.urandom(DEFAULT_KEY_BYTES)
-  hk2 = os.urandom(DEFAULT_KEY_BYTES)
+# Simple sender/receiver setup
+def setup(use_encrypted_header=False): 
+  # Generate shared secret
+  sk = os.urandom(KEY_LEN)
+  hk1 = os.urandom(KEY_LEN)
+  hk2 = os.urandom(KEY_LEN)
 
   # Init sessions
-  receiver_dh_keys = generate_dh_keys()
-  receiver = DRSessionHE()
-  receiver.setup_receiver(sk, receiver_dh_keys, hk2, hk1)
+  sender = None
+  receiver = None
+  if use_encrypted_header:
+    receiver = DRSessionHE()
+    receiver_dh_keys = receiver.generate_dh_keys()
+    receiver.setup_receiver(sk, receiver_dh_keys, hk2, hk1)
 
-  sender = DRSessionHE()
-  sender.setup_sender(sk, receiver_dh_keys.public_key(), hk1, hk2)
+    sender = DRSessionHE()
+    sender.setup_sender(sk, receiver_dh_keys.public_key, hk1, hk2)
+  else:
+    receiver = DRSession()
+    receiver_dh_keys = receiver.generate_dh_keys()
+    receiver.setup_receiver(sk, receiver_dh_keys)
 
+    sender = DRSession()
+    sender.setup_sender(sk, receiver_dh_keys.public_key)
+    
   return sender, receiver
 
-# Encrypt message from sender.
+# Encrypt message from sender
 def send_encrypt(sender):
-  pt = rand_str(rand.randint(0, 100))
-  data = os.urandom(rand.randint(0, 100))
+  pt = rand_str(rand.randint(1, 100))
+  data = os.urandom(rand.randint(1, 100))
 
   msg = sender.encrypt_message(pt, data)
   return pt, data, msg
 
-# Decrypt message as receiver.
-def recv_decrypt(self, receiver, original_pt, data, msg):
+# Decrypt message as receiver
+def recv_decrypt(receiver, data, msg):
   pt = receiver.decrypt_message(msg, data)
+  return pt
 
-  self.assertIsNotNone(pt)
-  self.assertEqual(pt, original_pt)
-
-# Encrypt/decrypt message between two users.
-def send_recv(self, sender, receiver):
+def send_recv(self, sender , receiver):
   pt, data, msg = send_encrypt(sender)
-  recv_decrypt(self, receiver, pt, data, msg)
+  pt_dec = recv_decrypt(receiver, data, msg)
+  self.assertEqual(pt, pt_dec)
 
 
 '''
@@ -56,26 +72,24 @@ Unit tests.
 class RatchetTests(unittest.TestCase):
   # Test encrypt message
   def test_encrypt(self):
-    a, _ = setup_convo()
+    a, _ = setup()
     msg = a.encrypt_message("pt", b"data")
-
     self.assertIsNotNone(msg)
 
   # Test decrypt message
   def test_decrypt(self):
-    a, b = setup_convo()
+    a, b = setup()
     send_recv(self, a, b)
 
   # Test one sided conversation
   def test_one_side(self):
-    a, b = setup_convo()
-    send_recv(self, a, b)
-    send_recv(self, a, b)
-    send_recv(self, a, b)
+    a, b = setup()
+    for i in range(100):
+      send_recv(self, a, b)
 
   # Test conversation
   def test_conversation(self):
-    a, b = setup_convo()
+    a, b = setup()
     send_recv(self, a, b)
     send_recv(self, b, a)
     send_recv(self, a, b)
@@ -83,104 +97,107 @@ class RatchetTests(unittest.TestCase):
     send_recv(self, b, a)
     send_recv(self, b, a)
 
-  # Test out of order messages single chain
+  # Test out of order messages in single chain
   def test_out_of_order_single(self):
-    a, b = setup_convo()
+    a, b = setup()
     
     pt1, data1, msg1 = send_encrypt(a)
     pt2, data2, msg2 = send_encrypt(a)
     pt3, data3, msg3 = send_encrypt(a)
 
-    recv_decrypt(self, b, pt2, data2, msg2)
-    recv_decrypt(self, b, pt3, data3, msg3)
-    recv_decrypt(self, b, pt1, data1, msg1)
+    pt_dec2 = recv_decrypt(b, data2, msg2)
+    self.assertEqual(pt2, pt_dec2)
+    pt_dec3 = recv_decrypt(b, data3, msg3)
+    self.assertEqual(pt3, pt_dec3)
+    pt_dec1 = recv_decrypt(b, data1, msg1)
+    self.assertEqual(pt1, pt_dec1)
 
   # Test out of order messages with DH ratchet step
   def test_out_of_order_ratchet(self):
-    a, b = setup_convo()
+    a, b = setup()
 
     pt1, data1, msg1 = send_encrypt(a)
-    recv_decrypt(self, b, pt1, data1, msg1)
+    pt_dec1 = recv_decrypt(b, data1, msg1)
+    self.assertEqual(pt1, pt_dec1)
     pt2, data2, msg2 = send_encrypt(a)
 
     # Simulate receiving new public key from B
-    dh_ratchet_he(a.get_state(), b.get_state().dh_pair.public_key())
+    dh_ratchet(a._state, b._state.dh_pair.public_key, DHKeyPair)
 
     pt3, data3, msg3 = send_encrypt(a)
-    recv_decrypt(self, b, pt3, data3, msg3)
-    recv_decrypt(self, b, pt2, data2, msg2)
+    pt_dec3 = recv_decrypt(b, data3, msg3)
+    self.assertEqual(pt3, pt_dec3)
+    pt_dec2 = recv_decrypt(b, data2, msg2)
+    self.assertEqual(pt2, pt_dec2)
 
   # Test replayed messages rejected
   def test_replay(self):
-    a, b = setup_convo()
+    a, b = setup()
   
-    pt, data, msg = send_encrypt(a)
-    recv_decrypt(self, b, pt, data, msg)
-    self.assertRaises(Exception, b.decrypt_message, msg, data)
-
-    # Check state restored correctly and can send/recv
-    send_recv(self, a, b)
+    _, data, msg = send_encrypt(a)
+    recv_decrypt(b, data, msg)
+    self.assertRaises(Exception, recv_decrypt, b, data, msg)
 
   # Test invalid authentication tag rejected
   def test_tampering(self):
-    a, b = setup_convo()
+    a, b = setup()
   
-    pt, data, msg = send_encrypt(a)
-    self.assertRaises(Exception, b.decrypt_message, msg, b"tamper")
+    _, data, msg = send_encrypt(a)
+    self.assertRaises(Exception, recv_decrypt, b, data + b"tamper", msg)
 
-    # Check state restored correctly and decrypt
-    recv_decrypt(self, b, pt, data, msg)
-
-  # Test old skipped mks deleted when skipped dict full
-  def test_skipped_mks_del(self):
-    a, b = setup_convo()
+  # Test too many skipped mks in chain
+  def test_skipped_mks_too_many(self):
+    a, b = setup()
     
-    pt1, data1, msg1 = send_encrypt(a)
-    pt2, data2, msg2 = send_encrypt(a)
-    for i in range(MAX_SKIP - 2):
+    for i in range(MAX_SKIP):
       send_encrypt(a)
     
     send_recv(self, a, b) # msg 1001, gens 1000 skipped keys
     send_encrypt(a)
-    send_recv(self, a, b) # 1003, gens new skipped, deletes first skipped
 
-    self.assertRaises(Exception, b.decrypt_message, msg1, data1)
-      
-    recv_decrypt(self, b, pt2, data2, msg2) # still succeeds
+    # msg 1003, gens new skipped key 
+    self.assertRaises(Exception, send_recv, self, a, b)
 
-  # Test old skipped mks deleted after num events
+  # Test event deletion policy
   def test_skipped_mks_event_del(self):
-    a, b = setup_convo()
+    a, b = setup()
+
+    _, data, msg = send_encrypt(a)
     
-    pt1, data1, msg1 = send_encrypt(a)
-    pt2, data2, msg2 = send_encrypt(a)
-    for i in range(DELETE_MIN_EVENTS): # increment even counter
+    # Trigger skipped key generated, decrypt events
+    for i in range(EVENT_THRESH + 1):
       send_recv(self, a, b)
-    
-    self.assertRaises(Exception, b.decrypt_message, msg1, data1)
-    
-    recv_decrypt(self, b, pt2, data2, msg2) # still succeeds
 
-  # TODO: for future when multiparty supported
+    self.assertRaises(Exception, recv_decrypt, b, data, msg)
 
-#   '''
-#   Test send multiple people messages (send).
-#   '''
-#   def test(self):
-#     pass
+  # Test session works after serializing and deserializing
+  def test_serialization(self):
+    a, b = setup()
+    send_recv(self, a, b)
+    send_recv(self, b, a)
+    send_recv(self, a, b)
+    send_recv(self, a, b)
+    send_recv(self, b, a)
+    send_recv(self, b, a)
 
-  
-#   '''
-#   Test send multiple people messages (receive).
-#   '''
-#   def test(self):
-#     pass
+    serial_a = a.serialize()
+    a_deserial = a.deserialize(serial_a)
 
-#   '''
-#   Test incorrect recipient message decrypt fail.
-#   '''
-#   def test(self):
-#     pass
+    send_recv(self, a_deserial, b)
+    send_recv(self, b, a_deserial)
+
+  # Test passing different aead class works
+  def test_aesgcm(self):
+    sk = os.urandom(KEY_LEN)
+    receiver = DRSession(aead=AES256GCM)
+    receiver_dh_keys = receiver.generate_dh_keys()
+    receiver.setup_receiver(sk, receiver_dh_keys)
+
+    sender = DRSession(aead=AES256GCM)
+    sender.setup_sender(sk, receiver_dh_keys.public_key)
+
+    send_recv(self, sender, receiver)
+
 
 if __name__ == '__main__':
   unittest.main() 

@@ -4,16 +4,17 @@ from abc import ABC, abstractmethod
 
 
 class RatchetIface(ABC):
-  """TODO:"""
+  """Double Ratchet Algorithm Communication Interface"""
 
   @staticmethod
   @abstractmethod
   def encrypt_message(state, pt, associated_data, aead):
-    """TODO:"""
+    """Encrypts plaintext from provided state using Double Ratchet algorithm."""
     pass
 
   @staticmethod
   @abstractmethod
   def decrypt_message(state, msg, associated_data, aead, keypair):
-    """TODO:"""
+    """Decrypts message ciphertext as provided state using Double 
+    Ratchet algorithm."""
     pass

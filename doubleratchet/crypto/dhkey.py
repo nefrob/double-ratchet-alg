@@ -1,13 +1,15 @@
 from __future__ import absolute_import
-from secrets import token_bytes
 
 from cryptography.hazmat.primitives import serialization
+
+# DH using Curve448
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 
 from ..interfaces.dhkey import DHKeyPairIface, DHPublicKeyIface
 
 
 class DHKeyPair(DHKeyPairIface):
+  """An implementation of the DHKeyPair Interface."""
   def __init__(self, dh_pair = None):
     if dh_pair:
       if not isinstance(dh_pair, X448PrivateKey):
@@ -35,6 +37,9 @@ class DHKeyPair(DHKeyPairIface):
 
   @classmethod
   def deserialize(cls, serialized_dh):
+    if not isinstance(serialized_dh, dict):
+      raise TypeError("serialized_dh must be of type: dict")
+
     private_key = X448PrivateKey.from_private_bytes(
       bytes.fromhex(serialized_dh["private_key"])
     )
@@ -48,6 +53,7 @@ class DHKeyPair(DHKeyPairIface):
   def public_key(self):
     return DHPublicKey(self._public_key)
 
+  # Returns private key in bytes form
   def _sk_bytes(self):
     return self._private_key.private_bytes(
       encoding=serialization.Encoding.Raw,
@@ -57,6 +63,7 @@ class DHKeyPair(DHKeyPairIface):
 
 
 class DHPublicKey(DHPublicKeyIface):
+  """An implementation of the DHPublicKey Interface."""
   KEY_LEN = 56
 
   def __init__(self, public_key):
@@ -93,13 +100,16 @@ class DHPublicKey(DHPublicKeyIface):
   
   @classmethod
   def deserialize(cls, serialized_pk):
+    if not isinstance(serialized_pk, dict):
+      raise TypeError("serialized_pk must be of type: dict")
+
     public_key = X448PublicKey.from_public_bytes(
       bytes.fromhex(serialized_pk["public_key"])
     )
     return cls(public_key)
 
 
-# TODO:
+# Returns public key in bytes form
 def pk_bytes(pk):
   return pk.public_bytes(
     encoding=serialization.Encoding.Raw,

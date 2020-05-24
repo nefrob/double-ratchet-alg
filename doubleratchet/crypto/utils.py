@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.hmac import HMAC
 
 
-# TODO:
+# Return HKDF outputs for provided key and params
 def hkdf(key, length, salt, info, hash_alg, backend):
   return HKDF(
     algorithm=hash_alg,
@@ -17,7 +17,7 @@ def hkdf(key, length, salt, info, hash_alg, backend):
     backend=backend
   ).derive(key)
 
-# TODO:
+# Return HMAC for provided key and params
 def hmac(key, data, hash_alg, backend):
   h = HMAC(
     key,
@@ -27,7 +27,8 @@ def hmac(key, data, hash_alg, backend):
   h.update(data)
   return h.finalize()
 
-# TODO:
+# Verifies HMAC signature on provided data
+# Raises exception on invalid signature
 def hmac_verify(key, data, hash_alg, backend, sig = None):
   h = HMAC(
     key,
@@ -43,3 +44,4 @@ def rand_str(n):
 
   return ''.join(choice(
     string.ascii_uppercase + string.digits) for i in range(n))
+    

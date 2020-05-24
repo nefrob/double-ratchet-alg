@@ -4,15 +4,15 @@ from abc import ABC, abstractmethod
 
 
 class SerializableIface(ABC):
-  """TODO:"""
+  """Serializable Interface"""
 
   @abstractmethod
   def serialize(self):
-    """TODO:"""
+    """Returns serialized dict of class state."""
     pass
 
   @classmethod
   @abstractmethod
   def deserialize(cls, serialized_obj):
-    """TODO:"""
+    """Class instance from serialized class state."""
     pass

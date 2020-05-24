@@ -9,6 +9,7 @@ from .utils import hkdf, hmac
 
 
 class SymmetricChain(SymmetricChainIface):
+  """An implementation of the Symmetric Chain Interface."""
   def __init__(self, ck = None, msg_no = None):
     if ck:
       if not isinstance(ck, bytes):
@@ -43,6 +44,9 @@ class SymmetricChain(SymmetricChainIface):
 
   @classmethod
   def deserialize(cls, serialized_chain):
+    if not isinstance(serialized_chain, dict):
+      raise TypeError("serialized_chain must be of type: dict")
+
     return cls(serialized_chain["ck"], serialized_chain["msg_no"])
   
   @property
@@ -63,6 +67,7 @@ class SymmetricChain(SymmetricChainIface):
 
 
 class RootChain(RootChainIface):
+  """An implementation of the Root Chain Interface."""
   KEY_LEN = 32
   DEFAULT_OUTPUTS = 1
 
@@ -110,6 +115,9 @@ class RootChain(RootChainIface):
 
   @classmethod
   def deserialize(cls, serialized_chain):
+    if not isinstance(serialized_chain, dict):
+      raise TypeError("serialized_chain must be of type: dict")
+
     return cls(serialized_chain["ck"])
 
   @property

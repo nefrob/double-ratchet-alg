@@ -12,12 +12,14 @@ from ..interfaces.aead import AEADIFace
 from .utils import hkdf, hmac, hmac_verify
 
 class AuthenticationFailed(Exception):
-  """TODO:"""
+  """Decrypting ciphertext with authenticated data failed."""
   pass
 
-
+# AES256-CBC with HMACSHA256 authentication
 class AES256CBCHMAC(AEADIFace):
-  KEY_LEN = 32
+  """An implementation of the AEAD Interface."""
+
+  KEY_LEN = 32 # 256-bit key
   IV_LEN = 16
   HKDF_LEN = 2 * KEY_LEN + IV_LEN
   TAG_LEN = 32
@@ -75,6 +77,7 @@ class AES256CBCHMAC(AEADIFace):
 
     return pt
 
+  # Generates AEAD keys using HKDF
   @staticmethod
   def _gen_keys(key):
     hkdf_out = hkdf(
@@ -90,6 +93,7 @@ class AES256CBCHMAC(AEADIFace):
       hkdf_out[AES256CBCHMAC.KEY_LEN:2*AES256CBCHMAC.KEY_LEN], \
       hkdf_out[-AES256CBCHMAC.IV_LEN:]
 
+  # Returns AES-CBC cipher
   @staticmethod
   def _aes_cipher(aes_key, iv):
     return Cipher(
@@ -98,9 +102,10 @@ class AES256CBCHMAC(AEADIFace):
       backend = default_backend()
     )
 
-
+# AES256-GCM
 class AES256GCM(AEADIFace):
-  KEY_LEN = 32
+  """An implementation of the AEAD Interface."""
+  KEY_LEN = 32 # 256-bit key
   IV_LEN = 16
 
   @staticmethod

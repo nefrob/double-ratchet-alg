@@ -3,13 +3,21 @@ from __future__ import absolute_import
 from .crypto.dhkey import DHPublicKey
 
 
+# Double Ratchet message header
 class Header:
-  """TODO:"""
-
   INT_ENCODE_BYTES = 4 # number of int bytes use when encoding a header
 
   def __init__(self, dh_pk, prev_chain_len, msg_no):
-    # TODO: check for errors?
+    if not isinstance(dh_pk, DHPublicKey):
+      raise TypeError("dh_pk must be of type: DHPublicKey")
+    if not isinstance(prev_chain_len, int):
+      raise TypeError("prev_chain_len must be of type: int")
+    if  prev_chain_len < 0:
+      raise ValueError("prev_chain_len must be positive")
+    if not isinstance(msg_no, int):
+      raise TypeError("msg_no must be of type: int")
+    if msg_no < 0:
+      raise ValueError("msg_no must be positive")
 
     self._dh_pk = dh_pk
     self._prev_chain_len = prev_chain_len
@@ -30,6 +38,9 @@ class Header:
 
   @classmethod
   def from_bytes(cls, header_bytes):
+    if not isinstance(header_bytes, bytes):
+      raise TypeError("header_bytes must be of type: bytes")
+
     if header_bytes == None or \
       len(header_bytes) != DHPublicKey.KEY_LEN + 2 * Header.INT_ENCODE_BYTES:
       raise ValueError("Inva")
@@ -46,7 +57,7 @@ class Header:
     
     return cls(dh_pk, prev_chain_len, msg_no)
 
-  # TODO: getters/setters?
+  # Getters/setters
 
   @property
   def dh_pk(self):
@@ -61,11 +72,18 @@ class Header:
     return self._msg_no
 
 
-# Ratchet message to transmit
+# Ratchet message
 class Message:
   def __init__(self, header, ct):
+    if not isinstance(header, Header):
+      raise TypeError("header must be of type: Header")
+    if not isinstance(ct, bytes):
+      raise TypeError("ct must be of type: bytes")
+
     self._header = header
     self._ct = ct
+
+  # Getters/setters
 
   @property
   def header(self):
@@ -75,12 +93,18 @@ class Message:
   def ct(self):
     return self._ct
 
-
-# Ratchet message using header encryption
+# Ratchet message (header encryption variant)
 class MessageHE:
   def __init__(self, header_ct, ct):
+    if not isinstance(header_ct, bytes):
+      raise TypeError("header_ct must be of type: bytes")
+    if not isinstance(ct, bytes):
+      raise TypeError("ct must be of type: bytes")
+
     self._header_ct = header_ct
     self._ct = ct
+
+  # Getters/setters
 
   @property
   def header_ct(self):

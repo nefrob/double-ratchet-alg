@@ -6,44 +6,44 @@ from .serializable import SerializableIface
 
 
 class KDFChainIface(SerializableIface):
-  """TODO:"""
+  """KDF Chain Interface."""
 
   @property
   @abstractmethod
   def ck(self):
-    """TODO:"""
+    """Returns chain key."""
     pass
 
   @ck.setter
   @abstractmethod
   def ck(self, val):
-    """TODO:"""
+    """Sets chain key to val."""
     pass
 
 class SymmetricChainIface(KDFChainIface):
-  """TODO:"""
+  """Symmetric KDF Chain Interface (extends KDFChain Interface)."""
 
   @abstractmethod
   def ratchet(self):
-    """TODO:"""
+    """Ratchets the KDF chain, updating the chain key."""
     pass
 
   @property
   @abstractmethod
   def msg_no(self):
-    """TODO:"""
+    """Returns the current chain message number (chain length)."""
     pass
 
   @msg_no.setter
   @abstractmethod
   def msg_no(self, val):
-    """TODO:"""
+    """Sets the current message number to val."""
     pass
 
 class RootChainIface(KDFChainIface):
-  """TODO:"""
+  """Root KDF Chain Interface (extends KDFChain Interface)."""
 
   @abstractmethod
   def ratchet(self, dh_out):
-    """TODO:"""
+    """Ratchets the KDF chain, updating the chain key."""
     pass

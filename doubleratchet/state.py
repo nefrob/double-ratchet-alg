@@ -1,11 +1,13 @@
 from __future__ import absolute_import
 
+# FIXME: remove dependence on pickle (needed for serializing 
+# passed interface implementation classes)
 import pickle
 
 from .interfaces.serializable import SerializableIface
 
 
-# TODO:
+# State for a party in double-ratchet algorithm
 class State(SerializableIface):
   def __init__(self, keypair, public_key, keystorage, 
       root_chain, symmetric_chain):
@@ -33,6 +35,7 @@ class State(SerializableIface):
     self._root_chain = root_chain
     self._symmetric_chain = symmetric_chain
 
+  # Sets initial sender state
   def init_sender(self, sk, dh_pk_r):
     self._dh_pair = self._keypair.generate_dh()
     self._dh_pk_r = dh_pk_r
@@ -48,6 +51,7 @@ class State(SerializableIface):
     self._skipped_mks = self._keystorage()
     self._skipped_count = 0
 
+  # Sets initial sender state (header encryption variant)
   def init_sender_he(self, sk, dh_pk_r, hk_s, next_hk_r):
     self._dh_pair = self._keypair.generate_dh()
     self._dh_pk_r = dh_pk_r
@@ -68,6 +72,7 @@ class State(SerializableIface):
     self._skipped_mks = self._keystorage()
     self._skipped_count = 0
 
+  # Sets initial receiver state
   def init_receiver(self, sk, dh_pair):
     self._dh_pair = dh_pair
     self._dh_pk_r = None
@@ -83,6 +88,7 @@ class State(SerializableIface):
     self._skipped_mks = self._keystorage()
     self._skipped_count = 0
 
+  # Sets initial receiver state (header encryption variant)
   def init_receiver_he(self, sk, dh_pair, next_hk_s, next_hk_r):
     self._dh_pair = dh_pair
     self._dh_pk_r = None
@@ -102,6 +108,8 @@ class State(SerializableIface):
 
     self._skipped_mks = self._keystorage()
     self._skipped_count = 0
+
+  # Getter/setters
 
   @property
   def dh_pair(self):
@@ -191,6 +199,7 @@ class State(SerializableIface):
   def skipped_count(self, val):
     self._skipped_count = val
 
+  # Serialize class
   def serialize(self):
     return {
       "dh_pair" : self._dh_pair.serialize(),
@@ -213,8 +222,12 @@ class State(SerializableIface):
       "symmetric_chain_class": pickle.dumps(self._symmetric_chain)
     }
   
+  # Deserialize class
   @classmethod
   def deserialize(cls, serialized_dict):
+    if not isinstance(serialized_dict, dict):
+      raise TypeError("serialized_dict must be of type: dict")
+
     keypair_class = pickle.loads(serialized_dict["keypair_class"])
     pk_class = pickle.loads(serialized_dict["pk_class"])
     keystorage_class = pickle.loads(serialized_dict["keystorage_class"])

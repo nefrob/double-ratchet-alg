@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import pickle
+import pickle # for saving interface implemented params :|
 
 from .interfaces.aead import AEADIFace
 from .interfaces.dhkey import DHKeyPairIface, DHPublicKeyIface
@@ -18,9 +18,16 @@ from .state import State
 
 
 class DRSession(SerializableIface):
-  """Double ratchet session."""
+  """Double Ratchet Session.
+  
+  Provides secure communication with peer session (initialized with same
+  shared secrets) using Double Ratchet Algorithm.
+  
+  Session can be serialized/deserialized if desired.
 
-  # TODO: set default classes
+  Reference: https://signal.org/docs/specifications/doubleratchet/
+  """
+
   def __init__(
       self,
       state: State = None,
@@ -31,6 +38,22 @@ class DRSession(SerializableIface):
       root_chain: RootChainIface = RootChain,
       symmetric_chain: SymmetricChainIface = SymmetricChain,
       ratchet: RatchetIface = Ratchet) -> None:
+    """Sets up new session and necessary Double Ratchet components.
+
+    Args:
+      state: State to initialize session with (ex. by deserializing 
+        saved session).
+      aead: a class implementating AEADIface.
+      keypair: an instance of an implementation for DHKeyPairIface.
+      public_key: an instance of an implementation for DHPublicKeyIface.
+      keystorage: an instance of an implementation for MsgKeyStorageIface.
+      root_chain: an instance of an implementation for RootChainIface.
+      symmetric_chain: an instance of an implementation for SymmetricChainIface.
+      ratchet: an instance of an implementation for RatchetIface.
+
+    Raises:
+      TypeError: on incorrect argument type.
+    """
 
     if state and not isinstance(state, State):
       raise TypeError("state must be of type: State")
@@ -63,8 +86,11 @@ class DRSession(SerializableIface):
     """Sets up session as initial sender.
 
     Args:
-      sk: shared secret key, agreed upon using protocol such as X3DH.
+      sk: shared secret key (agreed upon using protocol such as X3DH).
       dh_pk_r: received DH-ratchet public key.
+
+    Raises:
+      TypeError: on incorrect argument type.
     """
 
     if not isinstance(sk, bytes):
@@ -78,8 +104,11 @@ class DRSession(SerializableIface):
     """Sets up session as initial receiver.
 
     Args:
-      sk: shared secret key, agreed upon using protocol such as X3DH.
-      dh_pair: generated DH-ratchet key pair.
+      sk: shared secret key (agreed upon using protocol such as X3DH).
+      dh_pair: generated DH-ratchet keypair.
+    
+    Raises:
+      TypeError: on incorrect argument type.
     """
 
     if not isinstance(sk, bytes):
@@ -90,15 +119,14 @@ class DRSession(SerializableIface):
     self._state.init_receiver(sk, dh_pair)
 
   def encrypt_message(self, pt: str, associated_data: bytes) -> Message:
-    """Returns an encrypted message.
+    """Returns an encrypted message (header and ciphertext).
 
     Args:
       pt: plaintext to encrypt.
       associated_data: additional data to bind to ciphertext integrity.
 
     Raises:
-      Error: on message encryption failure the message is discarded
-      and state reverted (ciphertext is None).
+      TypeError: on incorrect argument type.
     """
     
     if not isinstance(pt, str):
@@ -111,15 +139,15 @@ class DRSession(SerializableIface):
     return msg
 
   def decrypt_message(self, msg: Message, associated_data: bytes) -> str:
-    """Returns an plaintext message.
+    """Returns decrypted message plaintext.
 
     Args:
-      msg: encrypted message (ciphertext).
+      msg: header and ciphertext.
       associated_data: additional data bound to ciphertext integrity.
 
     Raises:
-      Error: on message decryption failure the message is discarded
-      and state reverts.
+      TypeError: on incorrect argument type.
+      AuthenticationFailed: on decryption failure.
     """
 
     if not isinstance(msg, Message):
@@ -132,31 +160,52 @@ class DRSession(SerializableIface):
     return pt
 
   def generate_dh_keys(self) -> DHKeyPair:
-    """TODO:"""
+    """Returns a new DHKeypair."""
     return self._keypair.generate_dh()
 
   def serialize(self) -> dict:
+    """Returns serialized dictionary of session state."""
     return {
       "state" : self._state.serialize(),
-      "aead": pickle.dumps(self._aead),
+      "aead": pickle.dumps(self._aead), # need to use pickle to save class types
       "keypair": pickle.dumps(self._keypair),
       "ratchet": pickle.dumps(self._ratchet)
     }
 
   @classmethod
   def deserialize(cls, serialized_dict: dict):
+    """Returns new instance of DRSession from provided
+    serialized state.
+    
+    Args:
+      serialized_dict: serialized session state.
+      
+    Raises:
+      TypeError: on incorrect argument type.
+      """
+
+    if not isinstance(serialized_dict, dict):
+      raise TypeError("serialized_dict must be of type: dict")
+
     return cls(
       state=State.deserialize(serialized_dict["state"]),
-      aead=pickle.loads(serialized_dict["aead"]),
+      aead=pickle.loads(serialized_dict["aead"]), # need to use pickle to save class types
       keypair=pickle.loads(serialized_dict["keypair"]),
       ratchet=pickle.loads(serialized_dict["ratchet"])
     )
 
 
 class DRSessionHE(SerializableIface):
-  """Double ratchet session."""
+  """Double Ratchet Session using Header Encryption.
+  
+  Provides secure communication with peer session (initialized with same
+  shared secrets) using Double Ratchet Algorithm with header encryption.
+  
+  Session can be serialized/deserialized if desired.
 
-  # TODO: set default classes
+  Reference: https://signal.org/docs/specifications/doubleratchet/
+  """
+
   def __init__(
       self,
       state: State = None,
@@ -167,6 +216,22 @@ class DRSessionHE(SerializableIface):
       root_chain: RootChainIface = RootChain,
       symmetric_chain: SymmetricChainIface = SymmetricChain,
       ratchet: RatchetIface = Ratchet) -> None:
+    """Sets up new session and necessary Double Ratchet components.
+
+    Args:
+      state: State to initialize session with (ex. by deserializing 
+        saved session).
+      aead: a class implementating AEADIface.
+      keypair: an instance of an implementation for DHKeyPairIface.
+      public_key: an instance of an implementation for DHPublicKeyIface.
+      keystorage: an instance of an implementation for MsgKeyStorageIface.
+      root_chain: an instance of an implementation for RootChainIface.
+      symmetric_chain: an instance of an implementation for SymmetricChainIface.
+      ratchet: an instance of an implementation for RatchetIface.
+
+    Raises:
+      TypeError: on incorrect argument type.
+    """
 
     if state and not isinstance(state, State):
       raise TypeError("state must be of type: State")
@@ -200,8 +265,14 @@ class DRSessionHE(SerializableIface):
     """Sets up session as initial sender.
 
     Args:
-      sk: shared secret key, agreed upon using protocol such as X3DH.
+      sk: shared secret key (agreed upon using protocol such as X3DH).
       dh_pk_r: received DH-ratchet public key.
+      hk_s: shared header sending key (agreed upon using protocol such as X3DH).
+      next_hk_r: shared next header receiving key (agreed upon using protocol 
+        such as X3DH).
+
+    Raises:
+      TypeError: on incorrect argument type.
     """
 
     if not isinstance(sk, bytes):
@@ -220,8 +291,15 @@ class DRSessionHE(SerializableIface):
     """Sets up session as initial receiver.
 
     Args:
-      sk: shared secret key, agreed upon using protocol such as X3DH.
-      dh_pair: generated DH-ratchet key pair.
+      sk: shared secret key (agreed upon using protocol such as X3DH).
+      dh_pair: generated DH-ratchet keypair.
+      next_hk_s: shared next header sending key (agreed upon using protocol 
+        such as X3DH).
+      next_hk_r: shared next header receiving key (agreed upon using protocol 
+        such as X3DH).
+    
+    Raises:
+      TypeError: on incorrect argument type.
     """
 
     if not isinstance(sk, bytes):
@@ -236,15 +314,14 @@ class DRSessionHE(SerializableIface):
     self._state.init_receiver_he(sk, dh_pair, next_hk_s, next_hk_r)
 
   def encrypt_message(self, pt: str, associated_data: bytes) -> Message:
-    """Returns an encrypted message.
+    """Returns an encrypted message (header and ciphertext).
 
     Args:
       pt: plaintext to encrypt.
       associated_data: additional data to bind to ciphertext integrity.
 
     Raises:
-      Error: on message encryption failure the message is discarded
-      and state reverted (ciphertext is None).
+      TypeError: on incorrect argument type.
     """
     
     if not isinstance(pt, str):
@@ -257,15 +334,15 @@ class DRSessionHE(SerializableIface):
     return msg
 
   def decrypt_message(self, msg: Message, associated_data: bytes) -> str:
-    """Returns an plaintext message.
+    """Returns decrypted message plaintext.
 
     Args:
-      msg: encrypted message (ciphertext).
+      msg: header and ciphertext.
       associated_data: additional data bound to ciphertext integrity.
 
     Raises:
-      Error: on message decryption failure the message is discarded
-      and state reverts.
+      TypeError: on incorrect argument type.
+      AuthenticationFailed: on decryption failure.
     """
 
     if not isinstance(msg, Message):
@@ -278,10 +355,11 @@ class DRSessionHE(SerializableIface):
     return pt
 
   def generate_dh_keys(self) -> DHKeyPair:
-    """TODO:"""
+    """Returns a new DHKeypair."""
     return self._keypair.generate_dh()
 
   def serialize(self) -> dict:
+    """Returns serialized dictionary of session state."""
     return {
       "state" : self._state.serialize(),
       "aead": pickle.dumps(self._aead),
@@ -291,6 +369,18 @@ class DRSessionHE(SerializableIface):
 
   @classmethod
   def deserialize(cls, serialized_dict: dict):
+    """Returns new instance of DRSession from provided
+    serialized state.
+    
+    Args:
+      serialized_dict: serialized session state.
+      
+    Raises:
+      TypeError: on incorrect argument type.
+    """
+    if not isinstance(serialized_dict, dict):
+      raise TypeError("serialized_dict must be of type: dict")
+
     return cls(
       state=State.deserialize(serialized_dict["state"]),
       aead=pickle.loads(serialized_dict["aead"]),
