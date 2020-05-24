@@ -8,7 +8,7 @@ from .interfaces.kdfchain import RootChainIface, SymmetricChainIface
 from .interfaces.keystorage import MsgKeyStorageIface
 from .interfaces.ratchet import RatchetIface
 from .interfaces.serializable import SerializableIface
-from .crypto.aead import AES256CBCHMAC
+from .crypto.aead import AES256CBCHMAC, AES256GCM
 from .crypto.dhkey import DHKeyPair, DHPublicKey
 from .crypto.kdfchain import SymmetricChain, RootChain
 from .keystorage import MsgKeyStorage
@@ -209,7 +209,7 @@ class DRSessionHE(SerializableIface):
   def __init__(
       self,
       state: State = None,
-      aead: AEADIFace = AES256CBCHMAC, 
+      aead: AEADIFace = AES256GCM, 
       keypair: DHKeyPairIface = DHKeyPair,
       public_key: DHPublicKeyIface = DHPublicKey,
       keystorage: MsgKeyStorageIface = MsgKeyStorage, 
