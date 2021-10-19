@@ -162,7 +162,7 @@ def try_skipped_mks(state, header, ct, associated_data, aead):
 def try_skipped_mks_he(state, header_ct, ct, associated_data, aead):
   for ((hk_r, msg_no), mk) in state.skipped_mks.items():
     try:
-      header_bytes = aead.decrypt(state.hk_r, header_ct, b"")
+      header_bytes = aead.decrypt(hk_r, header_ct, b"")
     except:
       continue
     
